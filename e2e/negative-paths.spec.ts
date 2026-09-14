@@ -17,7 +17,7 @@ test.describe("negative paths", () => {
   test("rejects a full session", async ({ memberPage, e2e }) => {
     await memberPage.goto(`/classes/${e2e.sessions.full.id}`);
     await expect(memberPage.getByText("本堂已額滿")).toBeVisible();
-    await expect(memberPage.getByRole("button", { name: "預約這堂課" })).toBeDisabled();
+    await expect(memberPage.getByRole("button", { name: "本堂已額滿" })).toBeDisabled();
   });
 
   test("rejects a booking when the member has no credits", async ({
