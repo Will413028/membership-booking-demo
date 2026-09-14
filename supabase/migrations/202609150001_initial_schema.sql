@@ -116,6 +116,7 @@ create table public.payments (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null unique references public.orders (id) on delete cascade,
   status public.order_status not null default 'pending',
+  amount_twd_cents integer not null check (amount_twd_cents >= 0),
   provider_payment_reference text unique,
   provider_subscription_id text,
   processed_at timestamptz,
@@ -401,12 +402,14 @@ begin
     insert into public.payments (
       order_id,
       status,
+      amount_twd_cents,
       provider_payment_reference,
       provider_subscription_id,
       processed_at
     ) values (
       target_order.id,
       'paid',
+      target_order.amount_twd_cents,
       p_payment_reference,
       p_subscription_id,
       now()
