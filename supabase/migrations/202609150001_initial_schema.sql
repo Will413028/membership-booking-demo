@@ -52,7 +52,9 @@ create table public.memberships (
   check (
     (credits_total is null and credits_remaining is null)
     or (
-      credits_total >= 0
+      credits_total is not null
+      and credits_remaining is not null
+      and credits_total >= 0
       and credits_remaining >= 0
       and credits_remaining <= credits_total
     )
@@ -240,11 +242,11 @@ begin
   returning id into new_booking_id;
 
   if locked_membership.credits_remaining is not null then
-    update public.memberships
-       set credits_remaining = credits_remaining - 1,
+    update public.memberships as m
+       set credits_remaining = m.credits_remaining - 1,
            updated_at = now()
-     where id = locked_membership.id
-     returning memberships.credits_remaining into credits_remaining;
+     where m.id = locked_membership.id
+     returning m.credits_remaining into credits_remaining;
   else
     credits_remaining := null;
   end if;
@@ -302,11 +304,11 @@ begin
    where id = locked_booking.id;
 
   if locked_membership.credits_remaining is not null then
-    update public.memberships
-       set credits_remaining = least(credits_total, credits_remaining + 1),
+    update public.memberships as m
+       set credits_remaining = least(m.credits_total, m.credits_remaining + 1),
            updated_at = now()
-     where id = locked_membership.id
-     returning memberships.credits_remaining into credits_remaining;
+     where m.id = locked_membership.id
+     returning m.credits_remaining into credits_remaining;
   else
     credits_remaining := null;
   end if;
