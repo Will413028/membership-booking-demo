@@ -119,13 +119,13 @@ Next.js server actions／route handlers 是唯一的寫入入口。Supabase anon
 | Table | Important fields and invariants |
 |---|---|
 | `profiles` | `id` references `auth.users`、`full_name`、`phone`、`role` (`member`／`admin`) |
-| `plans` | `name`、`billing_type` (`subscription`／`one_time`)、`stripe_price_id`、`class_credits` (`8`／`NULL`／`1`)、`active` |
+| `plans` | `name`、`billing_type` (`subscription`／`one_time`)、`stripe_price_id`、`class_credits` (`8`／`NULL`／`1`)、`amount_twd_cents`、`active` |
 | `memberships` | `user_id`、`plan_id`、`status`、`credits_total`、`credits_remaining`、Stripe customer／subscription IDs、current period |
 | `classes` | `name`、`category`、`level`、`description`、`duration_minutes`、`instructor_name`、`active` |
 | `class_sessions` | `class_id`、`starts_at`、`ends_at`、`capacity`、`active`；有效預約數由 bookings 計算 |
 | `bookings` | `user_id`、`session_id`、`membership_id`、`status` (`confirmed`／`cancelled`)、created／cancelled timestamps |
-| `orders` | `user_id`、`status` (`pending`／`paid`／`failed`／`cancelled`／`refunded`)、amount、currency、Stripe session ID |
-| `order_items` | `order_id`、`plan_id`、quantity、unit amount snapshot |
+| `orders` | `user_id`、`status` (`pending`／`paid`／`failed`／`cancelled`／`refunded`)、`amount_twd_cents`、currency、Stripe session ID |
+| `order_items` | `order_id`、`plan_id`、quantity、`unit_amount_twd_cents` snapshot |
 | `payments` | `order_id`、Stripe payment intent／subscription reference、status、processed timestamp |
 | `stripe_events` | provider event ID unique、type、processed timestamp；不保存不必要的完整 payload |
 
@@ -133,7 +133,7 @@ Database constraints and transaction rules:
 
 - 對 `bookings` 建立 `WHERE status = 'confirmed'` 的 `user_id + session_id` partial unique index。
 - Booking mutation 在 transaction 內對 `class_sessions` 執行 `SELECT ... FOR UPDATE`，以 row lock 保護容量與額度檢查。
-- Order amount 以資料庫方案價格為準；`order_items.unit_amount` 保留付款當下的 snapshot。
+- Order amount 以資料庫方案價格為準；`order_items.unit_amount_twd_cents` 保留付款當下的 snapshot。
 - Stripe event ID、Checkout Session ID 與必要的 provider references 皆具 unique constraint，讓 webhook retry 不會重複建立 membership、扣額度或改訂單。
 
 ## Security and error handling
