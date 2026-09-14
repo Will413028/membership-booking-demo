@@ -21,6 +21,17 @@ export type Membership = {
   currentPeriodEnd: string;
 };
 
+export type Class = {
+  id: string;
+  name: string;
+  category: string;
+  level: string;
+  description: string;
+  durationMinutes: number;
+  instructorName: string;
+  active: boolean;
+};
+
 export type ClassSession = {
   id: string;
   classId: string;

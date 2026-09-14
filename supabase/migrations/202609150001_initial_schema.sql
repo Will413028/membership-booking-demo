@@ -155,6 +155,18 @@ create unique index bookings_one_active_per_user
   on public.bookings (user_id, session_id)
   where status = 'confirmed';
 
+create view public.session_confirmed_booking_counts
+with (security_invoker = false)
+as
+  select
+    sessions.id as session_id,
+    count(bookings.id) as confirmed_count
+  from public.class_sessions as sessions
+  left join public.bookings
+    on bookings.session_id = sessions.id
+   and bookings.status = 'confirmed'
+  group by sessions.id;
+
 create or replace function public.has_role(required_role text)
 returns boolean
 language sql
@@ -190,7 +202,7 @@ begin
    for update;
 
   if not found then
-    raise exception using errcode = 'P0001', message = 'SESSION_NOT_AVAILABLE';
+    raise exception using errcode = 'P0001', message = 'SESSION_STARTED';
   end if;
 
   if locked_session.starts_at <= now() then
@@ -571,8 +583,10 @@ revoke all on function public.has_role(text) from public;
 revoke all on function public.book_session(uuid, uuid) from public;
 revoke all on function public.cancel_booking(uuid) from public;
 revoke all on function public.apply_stripe_event(text, text, uuid, text, text, timestamptz, timestamptz, text) from public;
+revoke all on table public.session_confirmed_booking_counts from public;
 
 grant execute on function public.has_role(text) to authenticated;
 grant execute on function public.book_session(uuid, uuid) to authenticated;
 grant execute on function public.cancel_booking(uuid) to authenticated;
 grant execute on function public.apply_stripe_event(text, text, uuid, text, text, timestamptz, timestamptz, text) to service_role;
+grant select on table public.session_confirmed_booking_counts to anon, authenticated;
