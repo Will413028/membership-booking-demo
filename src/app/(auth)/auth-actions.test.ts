@@ -19,6 +19,14 @@ vi.mock("@/lib/supabase/server", () => ({
 import { login } from "./login/actions";
 import { signup } from "./signup/actions";
 
+const unsafeNextValues = [
+  "/\\external.example",
+  "/%5cexternal.example",
+  "/%255cexternal.example",
+  "/plans%0ASet-Cookie",
+  "/plans%",
+];
+
 function credentials(next?: string) {
   const formData = new FormData();
   formData.set("email", "member@example.com");
@@ -54,6 +62,15 @@ describe("login", () => {
 
     expect(mocks.redirect).toHaveBeenCalledWith("/account");
   });
+
+  test.each(unsafeNextValues)(
+    "rejects an unsafe continuation path after a successful login: %s",
+    async (next) => {
+      await login(credentials(next));
+
+      expect(mocks.redirect).toHaveBeenCalledWith("/account");
+    },
+  );
 });
 
 describe("signup", () => {
@@ -74,4 +91,13 @@ describe("signup", () => {
 
     expect(mocks.redirect).toHaveBeenCalledWith("/account");
   });
+
+  test.each(unsafeNextValues)(
+    "rejects an unsafe continuation path after a successful signup: %s",
+    async (next) => {
+      await signup(credentials(next));
+
+      expect(mocks.redirect).toHaveBeenCalledWith("/account");
+    },
+  );
 });

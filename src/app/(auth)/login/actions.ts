@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { safeNext } from "@/lib/auth/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -26,15 +27,6 @@ function getCredentials(formData: FormData) {
   });
 }
 
-function getSafeNext(formData: FormData): string {
-  const next = formData.get("next");
-  return typeof next === "string" &&
-    next.startsWith("/") &&
-    !next.startsWith("//")
-    ? next
-    : "/account";
-}
-
 export async function login(formData: FormData): Promise<AuthActionState> {
   const credentials = getCredentials(formData);
 
@@ -54,5 +46,5 @@ export async function login(formData: FormData): Promise<AuthActionState> {
     };
   }
 
-  redirect(getSafeNext(formData));
+  redirect(safeNext(formData.get("next")));
 }
