@@ -10,17 +10,24 @@ export async function POST(request: Request): Promise<Response> {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const body = await request.text();
 
-  if (!signature || !webhookSecret) {
+  if (!webhookSecret) {
+    return new Response("Stripe webhook is not configured.", { status: 500 });
+  }
+
+  if (!signature) {
     return new Response("Invalid Stripe signature.", { status: 400 });
+  }
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripeClient();
+  } catch {
+    return new Response("Stripe webhook is not configured.", { status: 500 });
   }
 
   let event: Stripe.Event;
   try {
-    event = getStripeClient().webhooks.constructEvent(
-      body,
-      signature,
-      webhookSecret,
-    );
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch {
     return new Response("Invalid Stripe signature.", { status: 400 });
   }

@@ -1,26 +1,52 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createAdminClient, getStripeClient, requireUser } = vi.hoisted(() => ({
+const {
+  checkoutCreate,
+  checkoutExpire,
+  createAdminClient,
+  createServerClient,
+  getStripeClient,
+  requireUser,
+} = vi.hoisted(() => ({
   requireUser: vi.fn(),
   createAdminClient: vi.fn(),
+  createServerClient: vi.fn(),
   getStripeClient: vi.fn(),
+  checkoutCreate: vi.fn(),
+  checkoutExpire: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/guards", () => ({ requireUser }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient }));
+vi.mock("@/lib/supabase/server", () => ({ createServerClient }));
 vi.mock("@/lib/stripe/server", () => ({ getStripeClient }));
 
 import { startCheckout } from "./actions";
 
-function adminClient(plan: Record<string, unknown> | null) {
-  const insertOrder = vi.fn(() => ({
-    select: () => ({
-      single: async () => ({ data: { id: "order-1" }, error: null }),
-    }),
-  }));
-  const insertItem = vi.fn(async () => ({ error: null }));
-  const updateOrder = vi.fn(() => ({ eq: async () => ({ error: null }) }));
+const databasePlan = {
+  id: "plan-1",
+  billing_type: "subscription",
+  stripe_price_id: "price_database",
+  amount_twd_cents: 288000,
+  class_credits: 8,
+};
+
+function authenticatedClient(plan: Record<string, unknown> | null) {
+  const rpc = vi.fn(async (name: string) => {
+    if (name === "create_checkout_order") {
+      return {
+        data: [{ order_id: "order-1", ...databasePlan }],
+        error: null,
+      };
+    }
+
+    if (name === "link_checkout_session" || name === "discard_checkout_order") {
+      return { data: true, error: null };
+    }
+
+    throw new Error(`Unexpected RPC: ${name}`);
+  });
 
   return {
     client: {
@@ -36,18 +62,11 @@ function adminClient(plan: Record<string, unknown> | null) {
             }),
           };
         }
-        if (table === "orders") {
-          return { insert: insertOrder, update: updateOrder };
-        }
-        if (table === "order_items") {
-          return { insert: insertItem };
-        }
         throw new Error(`Unexpected table: ${table}`);
       },
+      rpc,
     },
-    insertOrder,
-    insertItem,
-    updateOrder,
+    rpc,
   };
 }
 
@@ -59,69 +78,113 @@ describe("startCheckout", () => {
       email: "member@example.com",
       role: "member",
     });
+    checkoutCreate.mockResolvedValue({
+      id: "cs_1",
+      url: "https://checkout.stripe.test/cs_1",
+    });
+    checkoutExpire.mockResolvedValue({ id: "cs_1", status: "expired" });
     getStripeClient.mockReturnValue({
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({
-            id: "cs_1",
-            url: "https://checkout.stripe.test/cs_1",
-          })),
+          create: checkoutCreate,
+          expire: checkoutExpire,
         },
       },
     });
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://motion-room.test");
   });
 
-  it("creates a pending order from the re-read plan before creating Checkout", async () => {
-    const admin = adminClient({
-      id: "plan-1",
-      billing_type: "subscription",
-      stripe_price_id: "price_database",
-      amount_twd_cents: 288000,
-      class_credits: 8,
-    });
-    createAdminClient.mockReturnValue(admin.client);
+  it("uses the authenticated client and ownership-bound RPCs for a database-priced Checkout", async () => {
+    const authenticated = authenticatedClient(databasePlan);
+    createServerClient.mockResolvedValue(authenticated.client);
 
-    const result = await startCheckout({
-      planId: "plan-1",
-      amountTwdCents: 1,
-    } as never);
-
-    expect(result).toEqual({
+    await expect(startCheckout({ planId: "plan-1" })).resolves.toEqual({
       ok: true,
       orderId: "order-1",
       checkoutUrl: "https://checkout.stripe.test/cs_1",
     });
-    expect(admin.insertOrder).toHaveBeenCalledWith({
-      user_id: "user-1",
-      status: "pending",
-      amount_twd_cents: 288000,
-      currency: "twd",
-    });
-    expect(admin.insertItem).toHaveBeenCalledWith({
-      order_id: "order-1",
-      plan_id: "plan-1",
-      quantity: 1,
-      unit_amount_twd_cents: 288000,
-    });
-    expect(getStripeClient().checkout.sessions.create).toHaveBeenCalledWith(
+
+    expect(createAdminClient).not.toHaveBeenCalled();
+    expect(authenticated.rpc).toHaveBeenNthCalledWith(
+      1,
+      "create_checkout_order",
+      { p_plan_id: "plan-1" },
+    );
+    expect(checkoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: "subscription",
         line_items: [{ price: "price_database", quantity: 1 }],
         metadata: { orderId: "order-1" },
       }),
     );
+    expect(authenticated.rpc).toHaveBeenNthCalledWith(
+      2,
+      "link_checkout_session",
+      { p_order_id: "order-1", p_stripe_checkout_session_id: "cs_1" },
+    );
   });
 
-  it("returns the exact invalid-plan result without creating an order", async () => {
-    const admin = adminClient(null);
-    createAdminClient.mockReturnValue(admin.client);
-
-    await expect(startCheckout({ planId: "unknown" })).resolves.toEqual({
-      ok: false,
-      code: "INVALID_PLAN",
-      message: "The selected plan is unavailable.",
+  it("rejects an unconfigured Stripe price before creating a pending order", async () => {
+    const authenticated = authenticatedClient({
+      ...databasePlan,
+      stripe_price_id: null,
     });
-    expect(admin.insertOrder).not.toHaveBeenCalled();
+    createServerClient.mockResolvedValue(authenticated.client);
+
+    await expect(startCheckout({ planId: "plan-1" })).resolves.toMatchObject({
+      ok: false,
+      code: "CONFIGURATION_ERROR",
+    });
+
+    expect(authenticated.rpc).not.toHaveBeenCalled();
+    expect(checkoutCreate).not.toHaveBeenCalled();
+  });
+
+  it("discards an unlinked pending order when Stripe session creation fails", async () => {
+    const authenticated = authenticatedClient(databasePlan);
+    createServerClient.mockResolvedValue(authenticated.client);
+    checkoutCreate.mockRejectedValue(new Error("Stripe unavailable"));
+
+    await expect(startCheckout({ planId: "plan-1" })).resolves.toMatchObject({
+      ok: false,
+      code: "CONFIGURATION_ERROR",
+    });
+
+    expect(authenticated.rpc).toHaveBeenLastCalledWith(
+      "discard_checkout_order",
+      { p_order_id: "order-1" },
+    );
+    expect(checkoutExpire).not.toHaveBeenCalled();
+  });
+
+  it("retries the session link and expires then discards when it remains unlinked", async () => {
+    const authenticated = authenticatedClient(databasePlan);
+    authenticated.rpc.mockImplementation(async (name: string) => {
+      if (name === "create_checkout_order") {
+        return {
+          data: [{ order_id: "order-1", ...databasePlan }],
+          error: null,
+        };
+      }
+      if (name === "link_checkout_session") {
+        return { data: false, error: null };
+      }
+      if (name === "discard_checkout_order") {
+        return { data: true, error: null };
+      }
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    createServerClient.mockResolvedValue(authenticated.client);
+
+    await expect(startCheckout({ planId: "plan-1" })).resolves.toMatchObject({
+      ok: false,
+      code: "CONFIGURATION_ERROR",
+    });
+
+    expect(checkoutExpire).toHaveBeenCalledWith("cs_1");
+    expect(authenticated.rpc).toHaveBeenLastCalledWith(
+      "discard_checkout_order",
+      { p_order_id: "order-1" },
+    );
   });
 });
