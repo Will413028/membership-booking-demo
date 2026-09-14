@@ -26,6 +26,15 @@ function getCredentials(formData: FormData) {
   });
 }
 
+function getSafeNext(formData: FormData): string {
+  const next = formData.get("next");
+  return typeof next === "string" &&
+    next.startsWith("/") &&
+    !next.startsWith("//")
+    ? next
+    : "/account";
+}
+
 export async function signup(formData: FormData): Promise<AuthActionState> {
   const credentials = getCredentials(formData);
 
@@ -52,5 +61,5 @@ export async function signup(formData: FormData): Promise<AuthActionState> {
     };
   }
 
-  redirect("/account");
+  redirect(getSafeNext(formData));
 }
