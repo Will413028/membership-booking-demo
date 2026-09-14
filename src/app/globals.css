@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: 150 18% 97%;
-  --foreground: 160 28% 13%;
-  --primary: 158 32% 28%;
+  --background: 39 35% 96%;
+  --foreground: 152 25% 14%;
+  --primary: 97 21% 33%;
   --primary-foreground: 0 0% 100%;
-  --muted: 150 17% 92%;
-  --muted-foreground: 155 12% 42%;
-  --accent: 145 24% 83%;
-  --border: 150 15% 86%;
-  --radius: 0.75rem;
+  --muted: 39 18% 88%;
+  --muted-foreground: 151 10% 40%;
+  --accent: 91 24% 79%;
+  --border: 38 15% 81%;
+  --radius: 1rem;
 }
 
 @theme inline {
@@ -21,6 +21,13 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-accent: hsl(var(--accent));
   --color-border: hsl(var(--border));
+  --color-paper: hsl(39 35% 96%);
+  --color-ink: hsl(152 25% 14%);
+  --color-olive: hsl(97 21% 33%);
+  --color-sage: hsl(91 24% 79%);
+  --color-coral: hsl(10 65% 60%);
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-sans: Arial, Helvetica, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -38,17 +45,36 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-main {
-  min-height: 100vh;
-  display: grid;
-  align-content: center;
-  gap: 1rem;
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 3rem 1.5rem;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-a {
-  color: hsl(var(--primary));
-  font-weight: 700;
+button,
+input,
+select {
+  font: inherit;
+}
+
+.page-shell {
+  width: min(100% - 2.5rem, 72rem);
+  margin-inline: auto;
+}
+
+.marketing-main {
+  min-height: calc(100vh - 8rem);
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1.5rem;
+  background: hsl(var(--accent));
+}
+
+@media (min-width: 768px) {
+  .page-shell {
+    width: min(100% - 4rem, 72rem);
+  }
 }
