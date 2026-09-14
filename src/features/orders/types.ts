@@ -6,6 +6,7 @@ export type CheckoutActionResult =
       ok: false;
       code: "INVALID_PLAN" | "CONFIGURATION_ERROR";
       message: string;
+      recovery?: "ORDER_RETAINED";
     };
 
 export type OrderStatusView = {
