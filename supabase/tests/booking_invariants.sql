@@ -13,7 +13,6 @@ select has_function(
   array['text', 'text', 'uuid', 'text', 'text', 'timestamp with time zone', 'timestamp with time zone', 'text'],
   'Stripe event RPC has the approved signature'
 );
-select has_column('public', 'payments', 'amount_twd_cents', 'payments retain an integer TWD snapshot');
 select col_type_is(
   'public',
   'payments',
@@ -158,6 +157,15 @@ select is(
   ),
   1,
   'finite booking decrements credits by one'
+);
+select is(
+  (
+    select credits_remaining
+      from public.memberships
+     where id = '00000000-0000-0000-0000-000000000005'
+  ),
+  1,
+  'finite booking persists the one-credit decrement'
 );
 select is(
   (
