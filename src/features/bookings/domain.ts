@@ -24,7 +24,8 @@ export function canBookSession(
     return { ok: false, code: "MEMBERSHIP_INACTIVE" };
   }
 
-  if (new Date(input.startsAt).getTime() <= now.getTime()) {
+  const startsAt = new Date(input.startsAt).getTime();
+  if (!Number.isFinite(startsAt) || startsAt <= now.getTime()) {
     return { ok: false, code: "SESSION_STARTED" };
   }
 

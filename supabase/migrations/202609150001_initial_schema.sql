@@ -162,9 +162,14 @@ as
     sessions.id as session_id,
     count(bookings.id) as confirmed_count
   from public.class_sessions as sessions
+  inner join public.classes
+    on classes.id = sessions.class_id
   left join public.bookings
     on bookings.session_id = sessions.id
    and bookings.status = 'confirmed'
+  where sessions.active = true
+    and sessions.starts_at > now()
+    and classes.active = true
   group by sessions.id;
 
 create or replace function public.has_role(required_role text)

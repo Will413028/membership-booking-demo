@@ -35,6 +35,20 @@ describe("canBookSession", () => {
     ).toMatchObject({ ok: false, code: "MEMBERSHIP_INACTIVE" });
   });
 
+  it("keeps inactive membership ahead of an invalid session timestamp", () => {
+    expect(
+      canBookSession(
+        {
+          status: "expired",
+          startsAt: "not-a-timestamp",
+          remainingSpots: 1,
+          creditsRemaining: 1,
+        },
+        now,
+      ),
+    ).toMatchObject({ ok: false, code: "MEMBERSHIP_INACTIVE" });
+  });
+
   it("rejects a started session before capacity or credit conditions", () => {
     expect(
       canBookSession(
@@ -43,6 +57,20 @@ describe("canBookSession", () => {
           startsAt: started,
           remainingSpots: 0,
           creditsRemaining: 0,
+        },
+        now,
+      ),
+    ).toMatchObject({ ok: false, code: "SESSION_STARTED" });
+  });
+
+  it("rejects an invalid session timestamp as unavailable before capacity or credit conditions", () => {
+    expect(
+      canBookSession(
+        {
+          status: "active",
+          startsAt: "not-a-timestamp",
+          remainingSpots: 1,
+          creditsRemaining: 1,
         },
         now,
       ),
