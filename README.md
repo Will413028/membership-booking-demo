@@ -46,7 +46,7 @@ Hosted demo 使用已部署的 Supabase project URL/anon key、server-only servi
 
 一般 seed 只建立方案、課程與未來場次。建立 local demo admin 後，使用 Supabase Dashboard 或 SQL editor 將該帳號對應的 `profiles.role` 設為 `admin`；其他帳號維持 `member`。只在 local/disposable project 做這個操作。
 
-Playwright 不會自行開啟 app server，且預設安全 skip。欲跑 E2E，先手動啟動 app，並在未追蹤的 local environment 填入 `E2E_MEMBER_EMAIL`、`E2E_MEMBER_PASSWORD`、`E2E_ADMIN_EMAIL`、`E2E_ADMIN_PASSWORD`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` 和 `SUPABASE_SERVICE_ROLE_KEY`。另將 `E2E_SEED` 與 `E2E_DISPOSABLE_SUPABASE` 設為 true，並將 `E2E_RESET_COMMAND` 設為 `supabase db reset`。這會重設資料庫，然後建立測試帳號、future sessions、full session 與 pending checkout order；絕不可指向 shared 或 production database。需要非預設 URL 時設 `E2E_BASE_URL`。
+Playwright 不會自行開啟 app server，且預設安全 skip。E2E 固定只接受 local Supabase CLI endpoint（HTTP、`localhost`／`127.0.0.1`／`::1`、port `54321`）與 local app endpoint（HTTP、相同 local host、port `3000`）；remote、shared 與 production URL 一律以明確 prerequisite 訊息 skip。欲跑 E2E，先手動啟動 app，並在未追蹤的 local environment 填入 `E2E_MEMBER_EMAIL`、`E2E_MEMBER_PASSWORD`、`E2E_ADMIN_EMAIL`、`E2E_ADMIN_PASSWORD`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` 和 `SUPABASE_SERVICE_ROLE_KEY`。另將 `E2E_SEED` 與 `E2E_DISPOSABLE_SUPABASE` 設為 true，並將 `E2E_RESET_COMMAND` 設為 `supabase db reset`。reset 會以 repository root 作為 cwd 執行，且只會在 local-only guards 全部通過後才 seed 測試帳號、future sessions、full session 與 pending checkout order。需要非預設 local host 時設 `E2E_BASE_URL`。
 
 ## Tests
 

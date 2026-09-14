@@ -1,11 +1,16 @@
 import { execFile } from "node:child_process";
+import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { test as base, type Page } from "@playwright/test";
+import { localE2ETargetError } from "../src/lib/e2e/local-target";
 
 const execFileAsync = promisify(execFile);
 const resetCommand = "supabase db reset";
+const defaultAppBaseUrl = "http://127.0.0.1:3000";
+const repositoryCwd = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const requiredEnvironment = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -58,6 +63,11 @@ function prerequisiteMessage(): string | null {
   if (process.env.E2E_RESET_COMMAND !== resetCommand) {
     return "E2E skipped: E2E_RESET_COMMAND must be exactly 'supabase db reset'.";
   }
+  const targetError = localE2ETargetError({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    appBaseUrl: process.env.E2E_BASE_URL ?? defaultAppBaseUrl,
+  });
+  if (targetError) return targetError;
   const missing = requiredEnvironment.filter((name) => !process.env[name]);
   if (missing.length) {
     return `E2E skipped: missing required environment variables: ${missing.join(", ")}.`;
@@ -78,6 +88,7 @@ function adminClient(): SupabaseClient {
 
 async function resetDatabase(): Promise<void> {
   await execFileAsync("supabase", ["db", "reset"], {
+    cwd: repositoryCwd,
     env: process.env,
   });
 }

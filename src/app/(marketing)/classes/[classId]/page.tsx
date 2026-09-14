@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ConfigurationError } from "@/components/shared/configuration-error";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { BookingButton } from "@/features/bookings/components/booking-button";
 import { getSessionDetails } from "@/features/classes/queries";
+import type { ClassSessionDetails } from "@/features/classes/types";
+import { getCurrentUser } from "@/lib/auth/guards";
+import type { SessionUser } from "@/lib/auth/types";
+import { isConfigurationError } from "@/lib/errors/configuration";
 
 export default async function ClassDetailPage({
   params,
@@ -11,7 +17,17 @@ export default async function ClassDetailPage({
   params: Promise<{ classId: string }>;
 }) {
   const { classId } = await params;
-  const session = await getSessionDetails(classId);
+  let session: ClassSessionDetails | null;
+  let user: SessionUser | null;
+  try {
+    [session, user] = await Promise.all([
+      getSessionDetails(classId),
+      getCurrentUser(),
+    ]);
+  } catch (error) {
+    if (isConfigurationError(error)) return <ConfigurationError />;
+    throw error;
+  }
   if (!session) notFound();
   const start = new Intl.DateTimeFormat("zh-TW", {
     dateStyle: "full",
@@ -55,12 +71,16 @@ export default async function ClassDetailPage({
             </dd>
           </div>
         </dl>
-        <Link
-          className="mt-8 inline-flex rounded-full bg-ink px-5 py-3 font-semibold text-paper hover:bg-olive focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-coral"
-          href={`/login?next=/classes/${classId}`}
-        >
-          {full ? "查看其他課程" : "登入後預約"}
-        </Link>
+        {user ? (
+          <BookingButton full={full} sessionId={session.id} />
+        ) : (
+          <Link
+            className="mt-8 inline-flex rounded-full bg-ink px-5 py-3 font-semibold text-paper hover:bg-olive focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-coral"
+            href={`/login?next=/classes/${classId}`}
+          >
+            {full ? "查看其他課程" : "登入後預約"}
+          </Link>
+        )}
       </Card>
     </section>
   );

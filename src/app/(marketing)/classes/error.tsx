@@ -1,8 +1,17 @@
 "use client";
 
+import { ConfigurationError } from "@/components/shared/configuration-error";
 import { Button } from "@/components/ui/button";
+import { isConfigurationError } from "@/lib/errors/configuration";
 
-export default function ClassesError({ reset }: { reset: () => void }) {
+export default function ClassesError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  if (isConfigurationError(error)) return <ConfigurationError />;
   return (
     <section className="page-shell py-20">
       <div

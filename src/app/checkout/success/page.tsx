@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 
 import { getOrderStatus } from "@/features/orders/queries";
 import type { OrderStatusView } from "@/features/orders/types";
+import { isConfigurationError } from "@/lib/errors/configuration";
 
 const MAX_POLLS = 20;
 const POLL_INTERVAL_MS = 1_500;
 
 export default function CheckoutSuccessPage() {
   const [order, setOrder] = useState<OrderStatusView | null>(null);
-  const [state, setState] = useState<"processing" | "complete" | "unavailable">(
-    "processing",
-  );
+  const [state, setState] = useState<
+    "processing" | "complete" | "unavailable" | "configuration"
+  >("processing");
 
   useEffect(() => {
     const orderId = new URLSearchParams(window.location.search).get("order_id");
@@ -37,9 +38,11 @@ export default function CheckoutSuccessPage() {
           setState("complete");
           return;
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          setState("unavailable");
+          setState(
+            isConfigurationError(error) ? "configuration" : "unavailable",
+          );
         }
         return;
       }
@@ -74,6 +77,16 @@ export default function CheckoutSuccessPage() {
       <main>
         <h1>We could not confirm this payment</h1>
         <p>Please return to your account or try again later.</p>
+        <a href="/account">Go to your account</a>
+      </main>
+    );
+  }
+
+  if (state === "configuration") {
+    return (
+      <main>
+        <h1>CONFIGURATION_ERROR</h1>
+        <p>Checkout configuration is incomplete. No payment was processed.</p>
         <a href="/account">Go to your account</a>
       </main>
     );
