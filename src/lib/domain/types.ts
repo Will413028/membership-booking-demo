@@ -4,6 +4,7 @@ export type Plan = {
   id: string;
   code: PlanCode;
   billingType: "subscription" | "one_time";
+  stripePriceId?: string | null;
   classCredits: number | null;
   amountTwdCents: number;
 };
@@ -12,7 +13,11 @@ export type Membership = {
   id: string;
   userId: string;
   status: "active" | "past_due" | "canceled" | "expired";
+  creditsTotal: number | null;
   creditsRemaining: number | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  currentPeriodStart: string;
   currentPeriodEnd: string;
 };
 
