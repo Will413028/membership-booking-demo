@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { ConfigurationError } from "@/components/shared/configuration-error";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { ClassCard } from "@/features/classes/components/class-card";
 import { ClassFilters } from "@/features/classes/components/class-filters";
 import { listUpcomingSessions } from "@/features/classes/queries";
+import { isConfigurationError } from "@/lib/errors/configuration";
 
 type Search = {
   category?: string;
@@ -51,7 +53,8 @@ export default async function ClassesPage({
         )}
       </section>
     );
-  } catch {
+  } catch (error) {
+    if (isConfigurationError(error)) return <ConfigurationError />;
     return (
       <section className="page-shell py-20">
         <div
