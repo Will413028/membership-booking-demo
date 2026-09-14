@@ -52,28 +52,34 @@ export function SessionForm({ classes, session }: SessionFormProps) {
   const submit = async (formData: FormData) => {
     setPending(true);
     setStatus("");
-    const input: CreateSessionInput = {
-      classId,
-      instructorName,
-      startsAt: new Date(String(formData.get("startsAt"))).toISOString(),
-      endsAt: new Date(String(formData.get("endsAt"))).toISOString(),
-      capacity: Number(formData.get("capacity")),
-    };
-    const result: ActionResult<Session> = session
-      ? await updateClassSession({ id: session.id, ...input })
-      : await createClassSession(input);
-    setPending(false);
-    if (!result.ok) {
-      setErrors(result.fieldErrors ?? {});
-      setStatus(
-        result.code === "FORBIDDEN"
-          ? "You do not have admin access."
-          : "Please fix the highlighted fields.",
-      );
-      return;
+    setErrors({});
+    try {
+      const startsAt = formData.get("startsAt");
+      const endsAt = formData.get("endsAt");
+      const input: CreateSessionInput = {
+        classId,
+        instructorName,
+        startsAt: typeof startsAt === "string" ? startsAt : "",
+        endsAt: typeof endsAt === "string" ? endsAt : "",
+        capacity: Number(formData.get("capacity")),
+      };
+      const result: ActionResult<Session> = session
+        ? await updateClassSession({ id: session.id, ...input })
+        : await createClassSession(input);
+      if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
+        setStatus(
+          result.code === "FORBIDDEN"
+            ? "You do not have admin access."
+            : "Please fix the highlighted fields.",
+        );
+        return;
+      }
+      router.push("/admin/schedules");
+      router.refresh();
+    } finally {
+      setPending(false);
     }
-    router.push("/admin/schedules");
-    router.refresh();
   };
 
   return (

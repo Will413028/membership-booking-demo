@@ -9,11 +9,12 @@ export default async function EditSchedulePage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = await params;
-  const [session, classes] = await Promise.all([
-    getAdminSession(sessionId),
-    listAdminClasses(),
-  ]);
+  const session = await getAdminSession(sessionId);
   if (!session) notFound();
+  const classes = await listAdminClasses({
+    mode: "edit",
+    includeInactiveClassId: session.classId,
+  });
   return (
     <div className="space-y-6">
       <div>

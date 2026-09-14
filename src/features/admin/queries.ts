@@ -29,6 +29,17 @@ type SessionRecord = {
   classes: ClassRecord | ClassRecord[] | null;
 };
 
+export class AdminDataError extends Error {
+  constructor() {
+    super("Unable to load admin data.");
+    this.name = "AdminDataError";
+  }
+}
+
+function throwAdminDataError(): never {
+  throw new AdminDataError();
+}
+
 function related<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
@@ -72,7 +83,7 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   const [ordersResult, membersResult, bookingsResult, sessionsResult] =
     await Promise.all([
       supabase.from("orders").select("amount_twd_cents").eq("status", "paid"),
-      supabase.from("profiles").select("id").eq("role", "member"),
+      supabase.from("memberships").select("user_id").eq("status", "active"),
       supabase
         .from("bookings")
         .select("id, session_id, status, class_sessions(starts_at)")
@@ -86,6 +97,14 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
         .lt("starts_at", sevenDaysLater.toISOString())
         .order("starts_at", { ascending: true }),
     ]);
+  if (
+    ordersResult.error ||
+    membersResult.error ||
+    bookingsResult.error ||
+    sessionsResult.error
+  ) {
+    throwAdminDataError();
+  }
 
   const confirmedBySession = new Map<string, number>();
   let todayBookingCount = 0;
@@ -139,31 +158,45 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
     revenueTwdCents: (
       (ordersResult.data ?? []) as Array<{ amount_twd_cents: number }>
     ).reduce((total, order) => total + order.amount_twd_cents, 0),
-    activeMemberCount: (membersResult.data ?? []).length,
+    activeMemberCount: new Set(
+      ((membersResult.data ?? []) as Array<{ user_id: string }>).map(
+        (membership) => membership.user_id,
+      ),
+    ).size,
     todayBookingCount,
     capacitySummary,
     nextSessions: schedules.slice(0, 10),
   };
 }
 
-export async function listAdminClasses(): Promise<AdminClass[]> {
+export async function listAdminClasses(options: {
+  mode: "new" | "edit";
+  includeInactiveClassId?: string;
+}): Promise<AdminClass[]> {
   const supabase = await createServerClient();
   await requireAdmin(supabase);
   const { data, error } = await supabase
     .from("classes")
     .select("id, name, instructor_name, active")
     .order("name", { ascending: true });
-  if (error) return [];
+  if (error) throwAdminDataError();
   return (
     (data ?? []) as Array<
       Omit<AdminClass, "instructorName"> & { instructor_name: string }
     >
-  ).map((classRecord) => ({
-    id: classRecord.id,
-    name: classRecord.name,
-    instructorName: classRecord.instructor_name,
-    active: classRecord.active,
-  }));
+  )
+    .filter(
+      (classRecord) =>
+        classRecord.active ||
+        (options.mode === "edit" &&
+          classRecord.id === options.includeInactiveClassId),
+    )
+    .map((classRecord) => ({
+      id: classRecord.id,
+      name: classRecord.name,
+      instructorName: classRecord.instructor_name,
+      active: classRecord.active,
+    }));
 }
 
 export async function listAdminSchedules(
@@ -180,7 +213,7 @@ export async function listAdminSchedules(
   if (filters.active) query = query.eq("active", filters.active === "active");
 
   const { data, error } = await query;
-  if (error) return [];
+  if (error) throwAdminDataError();
   const search = filters.search?.trim().toLocaleLowerCase();
   return ((data ?? []) as SessionRecord[])
     .map((session) => toSchedule(session))
@@ -207,9 +240,10 @@ export async function getAdminSession(
     )
     .eq("id", sessionId)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) throwAdminDataError();
+  if (!data) return null;
   const schedule = toSchedule(data as SessionRecord);
-  if (!schedule) return null;
+  if (!schedule) throwAdminDataError();
   const {
     className: _className,
     category: _category,
@@ -230,7 +264,7 @@ export async function listAdminBookings(
       "id, status, created_at, cancelled_at, profiles!inner(full_name), class_sessions!inner(starts_at, classes!inner(name))",
     )
     .order("created_at", { ascending: false });
-  if (error) return [];
+  if (error) throwAdminDataError();
   const keyword = search?.trim().toLocaleLowerCase();
   return (data ?? [])
     .map((row) => {
@@ -285,7 +319,7 @@ export async function listAdminMembers(
     )
     .eq("role", "member")
     .order("created_at", { ascending: false });
-  if (error) return [];
+  if (error) throwAdminDataError();
   const keyword = search?.trim().toLocaleLowerCase();
   return (data ?? [])
     .map((row) => {
@@ -323,7 +357,7 @@ export async function listAdminOrders(search?: string): Promise<AdminOrder[]> {
       "id, status, amount_twd_cents, created_at, profiles!inner(full_name), order_items(plans(name))",
     )
     .order("created_at", { ascending: false });
-  if (error) return [];
+  if (error) throwAdminDataError();
   const keyword = search?.trim().toLocaleLowerCase();
   return (data ?? [])
     .map((row) => {

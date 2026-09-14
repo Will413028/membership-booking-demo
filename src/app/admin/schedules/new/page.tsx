@@ -2,7 +2,7 @@ import { SessionForm } from "@/features/admin/components/session-form";
 import { listAdminClasses } from "@/features/admin/queries";
 
 export default async function NewSchedulePage() {
-  const classes = await listAdminClasses();
+  const classes = await listAdminClasses({ mode: "new" });
   return (
     <div className="space-y-6">
       <div>

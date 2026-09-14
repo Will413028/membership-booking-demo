@@ -97,6 +97,7 @@ function mapSession(
 async function validClass(
   input: CreateSessionInput,
   supabase: Awaited<ReturnType<typeof createServerClient>>,
+  allowedInactiveClassId?: string,
 ): Promise<ActionResult<{ instructorName: string }> | null> {
   const { data, error } = await supabase
     .from("classes")
@@ -110,7 +111,10 @@ async function validClass(
   } | null;
 
   if (error) return databaseFailure();
-  if (!classRecord?.active) {
+  if (
+    !classRecord ||
+    (!classRecord.active && classRecord.id !== allowedInactiveClassId)
+  ) {
     return {
       ok: false,
       code: "VALIDATION_ERROR",
@@ -198,7 +202,18 @@ export async function updateClassSession(
     };
   }
 
-  const classResult = await validClass(parsed.data, supabase);
+  const { data: existingSession, error: existingSessionError } = await supabase
+    .from("class_sessions")
+    .select("class_id")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+  if (existingSessionError || !existingSession) return databaseFailure();
+
+  const classResult = await validClass(
+    parsed.data,
+    supabase,
+    (existingSession as { class_id: string }).class_id,
+  );
   if (!classResult?.ok) return classResult ?? databaseFailure();
 
   const { data, error } = await supabase
@@ -249,11 +264,13 @@ export async function setSessionActive(input: {
     };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("class_sessions")
     .update({ active: parsed.data.active })
-    .eq("id", parsed.data.sessionId);
-  if (error) return databaseFailure();
+    .eq("id", parsed.data.sessionId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return databaseFailure();
 
   revalidateSchedules();
   return { ok: true, data: undefined };
@@ -277,9 +294,9 @@ function cancellationFailure(code: string): AdminCancelBookingResult {
   };
 }
 
-export async function cancelBookingAsAdmin(input: {
-  bookingId: string;
-}): Promise<AdminCancelBookingResult> {
+export async function cancelBookingAsAdmin(
+  input: unknown,
+): Promise<AdminCancelBookingResult> {
   const supabase = await createServerClient();
   try {
     await requireAdmin(supabase);
@@ -294,10 +311,13 @@ export async function cancelBookingAsAdmin(input: {
     );
   }
 
-  if (!input.bookingId.trim()) return cancellationFailure("BOOKING_NOT_FOUND");
+  const parsed = z
+    .object({ bookingId: z.string().trim().min(1) })
+    .safeParse(input);
+  if (!parsed.success) return cancellationFailure("BOOKING_NOT_FOUND");
 
   const { data, error } = await supabase.rpc("cancel_booking", {
-    p_booking_id: input.bookingId,
+    p_booking_id: parsed.data.bookingId,
   });
   if (error) {
     const message = typeof error.message === "string" ? error.message : "";

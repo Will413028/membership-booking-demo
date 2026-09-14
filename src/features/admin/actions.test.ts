@@ -16,7 +16,7 @@ import {
   setSessionActive,
   updateClassSession,
 } from "./actions";
-import { getAdminDashboard } from "./queries";
+import { getAdminDashboard, listAdminClasses } from "./queries";
 
 const validSession = {
   classId: "class-1",
@@ -42,6 +42,10 @@ function sessionClient() {
     },
     error: null,
   });
+  const updateMaybeSingle = vi.fn().mockResolvedValue({
+    data: { id: "session-1" },
+    error: null,
+  });
   const from = vi.fn((table: string) => {
     if (table === "classes") {
       return {
@@ -52,13 +56,59 @@ function sessionClient() {
       return {
         insert: () => ({ select: () => ({ single: insertSingle }) }),
         update: () => ({
-          eq: () => ({ select: () => ({ single: insertSingle }) }),
+          eq: () => ({
+            select: () => ({
+              single: insertSingle,
+              maybeSingle: updateMaybeSingle,
+            }),
+          }),
         }),
       };
     }
     throw new Error(`Unexpected table: ${table}`);
   });
-  return { client: { from, rpc: vi.fn() }, from, maybeSingle, insertSingle };
+  return {
+    client: { from, rpc: vi.fn() },
+    from,
+    maybeSingle,
+    insertSingle,
+    updateMaybeSingle,
+  };
+}
+
+function dashboardClient({
+  orders = { data: [], error: null },
+  profiles = { data: [], error: null },
+  memberships = { data: [], error: null },
+  bookings = { data: [], error: null },
+  sessions = { data: [], error: null },
+}: {
+  orders?: { data: unknown; error: unknown };
+  profiles?: { data: unknown; error: unknown };
+  memberships?: { data: unknown; error: unknown };
+  bookings?: { data: unknown; error: unknown };
+  sessions?: { data: unknown; error: unknown };
+}) {
+  return {
+    from: vi.fn((table: string) => {
+      if (table === "orders")
+        return { select: () => ({ eq: async () => orders }) };
+      if (table === "profiles")
+        return { select: () => ({ eq: async () => profiles }) };
+      if (table === "memberships")
+        return { select: () => ({ eq: async () => memberships }) };
+      if (table === "bookings")
+        return { select: () => ({ eq: async () => bookings }) };
+      if (table === "class_sessions") {
+        return {
+          select: () => ({
+            gte: () => ({ lt: () => ({ order: async () => sessions }) }),
+          }),
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    }),
+  };
 }
 
 describe("admin server actions", () => {
@@ -80,6 +130,36 @@ describe("admin server actions", () => {
       code: "FORBIDDEN",
     });
     expect(database.from).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a safe error instead of rendering a partial dashboard when a query fails", async () => {
+    const database = dashboardClient({
+      orders: { data: null, error: { message: "sensitive database detail" } },
+    });
+    createServerClient.mockResolvedValue(database);
+
+    await expect(getAdminDashboard()).rejects.toThrow(
+      "Unable to load admin data.",
+    );
+  });
+
+  it("counts distinct users with active memberships rather than every member profile", async () => {
+    const database = dashboardClient({
+      memberships: {
+        data: [
+          { user_id: "member-1" },
+          { user_id: "member-1" },
+          { user_id: "member-2" },
+        ],
+        error: null,
+      },
+    });
+    createServerClient.mockResolvedValue(database);
+
+    await expect(getAdminDashboard()).resolves.toMatchObject({
+      activeMemberCount: 2,
+    });
+    expect(database.from).toHaveBeenCalledWith("memberships");
   });
 
   it.each([
@@ -161,6 +241,85 @@ describe("admin server actions", () => {
     });
   });
 
+  it("allows an edit to preserve its current inactive class but rejects a different inactive class", async () => {
+    const updateSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "session-1",
+        class_id: "class-1",
+        starts_at: validSession.startsAt,
+        ends_at: validSession.endsAt,
+        capacity: 12,
+        active: true,
+      },
+      error: null,
+    });
+    const database = {
+      client: {
+        from: vi.fn((table: string) => {
+          if (table === "class_sessions") {
+            return {
+              select: () => ({
+                eq: () => ({
+                  maybeSingle: async () => ({
+                    data: { class_id: "class-1" },
+                    error: null,
+                  }),
+                }),
+              }),
+              update: () => ({
+                eq: () => ({ select: () => ({ single: updateSingle }) }),
+              }),
+            };
+          }
+          if (table === "classes") {
+            return {
+              select: () => ({
+                eq: (_field: string, classId: string) => ({
+                  maybeSingle: async () => ({
+                    data: {
+                      id: classId,
+                      instructor_name: "Ada Lin",
+                      active: false,
+                    },
+                    error: null,
+                  }),
+                }),
+              }),
+            };
+          }
+          throw new Error(`Unexpected table: ${table}`);
+        }),
+      },
+    };
+    createServerClient.mockResolvedValue(database.client);
+
+    await expect(
+      updateClassSession({ id: "session-1", ...validSession }),
+    ).resolves.toMatchObject({ ok: true });
+
+    await expect(
+      updateClassSession({
+        id: "session-1",
+        ...validSession,
+        classId: "class-2",
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fieldErrors: { classId: expect.any(String) },
+    });
+  });
+
+  it("returns DATABASE_ERROR instead of success when a session to toggle is absent", async () => {
+    const database = sessionClient();
+    createServerClient.mockResolvedValue(database.client);
+    database.updateMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    await expect(
+      setSessionActive({ sessionId: "missing-session", active: false }),
+    ).resolves.toEqual({ ok: false, code: "DATABASE_ERROR" });
+  });
+
   it("cancels through the transactional RPC and only returns credits after it succeeds", async () => {
     const database = sessionClient();
     database.client.rpc.mockResolvedValue({
@@ -179,5 +338,44 @@ describe("admin server actions", () => {
     expect(database.client.rpc).toHaveBeenCalledWith("cancel_booking", {
       p_booking_id: "booking-1",
     });
+  });
+
+  it("rejects malformed cancellation payloads without reading a property or calling the RPC", async () => {
+    const database = sessionClient();
+    createServerClient.mockResolvedValue(database.client);
+
+    await expect(cancelBookingAsAdmin(null as never)).resolves.toMatchObject({
+      ok: false,
+      code: "BOOKING_NOT_FOUND",
+    });
+    expect(database.client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns active classes for new sessions and only the current inactive class for edits", async () => {
+    const classes = [
+      { id: "active", name: "Active", instructor_name: "Ada", active: true },
+      { id: "current", name: "Current", instructor_name: "Bea", active: false },
+      { id: "other", name: "Other", instructor_name: "Cy", active: false },
+    ];
+    const database = {
+      client: {
+        from: vi.fn(() => ({
+          select: () => ({
+            order: async () => ({ data: classes, error: null }),
+          }),
+        })),
+      },
+    };
+    createServerClient.mockResolvedValue(database.client);
+
+    await expect(listAdminClasses({ mode: "new" })).resolves.toEqual([
+      { id: "active", name: "Active", instructorName: "Ada", active: true },
+    ]);
+    await expect(
+      listAdminClasses({ mode: "edit", includeInactiveClassId: "current" }),
+    ).resolves.toEqual([
+      { id: "active", name: "Active", instructorName: "Ada", active: true },
+      { id: "current", name: "Current", instructorName: "Bea", active: false },
+    ]);
   });
 });
