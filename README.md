@@ -26,7 +26,37 @@ pnpm dev
 - `Unlimited`：每月不限堂數。
 - `Single Class`：一次購買 1 堂。
 
+Seed 的 `stripe_price_id` 刻意留空；空值會安全拒絕 Checkout。請先在 **Stripe test mode** 建立三個 Product／Price（TWD，停用 trial、coupon、proration）：
+
+| Plan code | Price | Billing |
+| --- | --- | --- |
+| `starter-monthly` | NT$2,880（`unit_amount=288000`） | 每月、interval_count=1 |
+| `unlimited-monthly` | NT$4,680（`unit_amount=468000`） | 每月、interval_count=1 |
+| `single-class` | NT$680（`unit_amount=68000`） | 一次性，資格 30 天 |
+
+在該 local/test project 的 SQL editor 將三個實際 `price_...` ID 分別填入 `public.plans.stripe_price_id`，以 `code` 精確定位。不要改 seed 成共用帳戶的真實 ID；每次 reset 後重新設定。Webhook endpoint 必須接收 `checkout.session.completed`、`checkout.session.async_payment_succeeded`、`invoice.paid`、`invoice.payment_failed`、`customer.subscription.updated`、`customer.subscription.deleted`。Server key 僅接受 `sk_test_`／`rk_test_`；verified event 與其 object 都必須是 test mode。
+
 Stripe Checkout 僅能使用 Stripe test mode。手動付款測試使用卡號 `4242 4242 4242 4242`、任意未來到期日、任意 CVC 與郵遞區號；不要輸入真實卡片資料。會員資格只能由驗證過的 Stripe webhook 啟用，success page 在訂單仍是 `pending` 時只會顯示 processing，不會自行授予資格。
+
+未付款的 completed event 不授權；延遲付款由 async success／paid invoice 處理。月訂閱的第一期與續期都只依 `invoice.paid` 的 subscription line period 發堂數，絕不重新 retrieve「目前」subscription period。Checkout 即使已 paid，仍可能顯示 processing，直到該 order 的 membership 建立。相同 order 只能產生一筆 membership，同期 invoice 不會重設已花費堂數。欠款／取消狀態有 event 時序與 invoice period 防護；取消為該 subscription 的終止狀態。同秒衝突採保守排序：canceled > adverse status > paid > active update。
+
+### Database RPC compatibility
+
+`202609150003_final_integrity_hardening.sql` 保留八參數 `apply_stripe_event(text,text,uuid,text,text,timestamptz,timestamptz,text)` wrapper，但它只能 no-op 已記錄的 retry；新事件因缺乏 payment/status/ordering evidence，回傳 `STRIPE_EVENT_CONTEXT_REQUIRED`（不存在 order 仍為 `ORDER_NOT_FOUND`）。部署時先套 migration，再更新 webhook caller：
+
+```text
+apply_stripe_event_v2(
+  p_provider_event_id text, p_event_type text, p_order_id uuid,
+  p_customer_id text, p_subscription_id text, p_period_start timestamptz,
+  p_period_end timestamptz, p_payment_reference text,
+  p_event_created_at timestamptz, p_membership_status membership_status,
+  p_payment_status text
+)
+```
+
+兩個入口都明確禁止 PUBLIC／anon／authenticated，只允許 service_role。不能用八個原始參數安全表達 Stripe 的 actual status、付款證據及 event.created；因此不能把舊 caller 的新事件默認成 paid／active。暫時的部署版本落差會讓 webhook retry，不會授予資格。Legacy subscription 只回填可證明的 order 關係；沒有證據的舊 one-time grant 不猜測連結，需人工對帳。未能證明原週期的舊 booking 不跨期退堂。
+
+一般 signup 的 auth.users INSERT trigger 固定建立 member profile，忽略 metadata 中的 admin role。場次建立／編輯一律輸入 Asia/Taipei studio time，再送出含 UTC offset 的 instant。預約鎖定場次、parent class 與會員資格；capacity 不能降到 confirmed bookings 以下。取消仍可完成，但只在原扣堂 period 退堂，不把上期堂數加到新一期。
 
 ## Environment contract
 
@@ -59,6 +89,12 @@ pnpm e2e
 ```
 
 `pnpm e2e` 需要上述 disposable database、E2E variables、已啟動的 app 與可用 Playwright browser binary。缺少 E2E prerequisite 時 specs 會以明確理由 skip；不要把 skip 當成 E2E 已通過。不要在一般 CI 執行 Stripe CLI forwarding 或 fake payment。
+
+新增的 signup 測試走真正 UI registration／Auth trigger，不使用 profile upsert。原 seeded booking specs 是操作測試，**不是付款驗收**。要另外執行 Single Class 與 Starter 8 的完整真實 test-payment 流程，設定 `E2E_STRIPE=true`、`E2E_STRIPE_SINGLE_PRICE_ID`、`E2E_STRIPE_STARTER_PRICE_ID`，並提供 test key、webhook secret 與正在運作的 Stripe CLI forwarding。測試先 retrieve Price／Checkout 驗證 test mode 與金額，再填 Stripe 測試卡；不造 webhook、不直接把 order 改為 paid、不 seed 該註冊會員的資格。此 opt-in 會在 Stripe **test account** 建立付款與測試 subscription；完成後可在 test dashboard 清理／取消。Local `supabase/config.toml` 的 email confirmations 已關閉；不要把這個測試設定套用至 production。
+
+DB 驗證可在 local Supabase 執行 `supabase test db`。沒有完整 Supabase CLI 時，也能在獨立、可拋棄的 Supabase PostgreSQL 17 container 依序套用三個 migrations、seed、建立 `pgtap` extension，再用 `psql -At -v ON_ERROR_STOP=1` 執行 `supabase/tests/booking_invariants.sql`；必須同時檢查 TAP 的 `not ok` 與 plan count，不能只看 psql exit code。
+
+獨立 PostgREST integration harness：只在 task-owned disposable DB 將 pgTAP fixture 最後的 rollback 轉為 commit，套 `supabase/tests/query_memberships.sql`，並將 service-role-only PostgREST 綁在 `127.0.0.1:55434`（不對外開放）。執行 `PGTAP_REST_URL=http://127.0.0.1:55434 pnpm exec vitest run --config supabase/tests/postgrest.config.ts`，再跑 `node supabase/tests/concurrency.mjs <task-owned-container>`。後者要求 container 名稱以 `membership-remediation-` 開頭且 label `task=membership-remediation`，會改動 fixture，重跑需新 disposable DB。它驗證兩連線搶位與容量調整競爭；PostgREST harness 驗證真實 embedding／排序，不宣稱其 auth stub 是 RLS 測試。RLS coverage 在 pgTAP 使用實際 SET ROLE。
 
 ## Phase 2 boundaries
 

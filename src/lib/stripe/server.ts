@@ -14,7 +14,7 @@ let stripeClient: Stripe | undefined;
 export function getStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
-  if (!secretKey) {
+  if (!secretKey || !/^(sk|rk)_test_/.test(secretKey)) {
     throw new StripeConfigurationError();
   }
 

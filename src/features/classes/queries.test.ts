@@ -176,4 +176,28 @@ describe("class session queries", () => {
 
     await expect(getSessionDetails("missing")).resolves.toBeNull();
   });
+
+  it("throws a safe failure when the database is unavailable instead of an empty schedule", async () => {
+    const database = sessionsClient(null, null);
+    database.sessionQuery.order.mockResolvedValue({
+      data: null,
+      error: { message: "private detail" },
+    });
+    createServerClient.mockResolvedValue(database.client);
+    await expect(listUpcomingSessions({})).rejects.toThrow(
+      "Unable to load data.",
+    );
+  });
+
+  it("does not report not-found when the detail query fails", async () => {
+    const database = sessionsClient(null, null);
+    database.sessionQuery.maybeSingle.mockResolvedValue({
+      data: null,
+      error: { message: "private detail" },
+    });
+    createServerClient.mockResolvedValue(database.client);
+    await expect(getSessionDetails("session-1")).rejects.toThrow(
+      "Unable to load data.",
+    );
+  });
 });

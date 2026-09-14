@@ -23,7 +23,11 @@ export function OrderTable({ orders }: { orders: AdminOrder[] }) {
       </thead>
       <tbody>
         {orders.map((order) => (
-          <tr className="border-b border-border last:border-0" key={order.id}>
+          <tr
+            data-testid={`order-${order.id}`}
+            className="border-b border-border last:border-0"
+            key={order.id}
+          >
             <td className="p-3 font-semibold">{order.memberName}</td>
             <td className="p-3">{order.planName}</td>
             <td className="p-3">
@@ -33,9 +37,10 @@ export function OrderTable({ orders }: { orders: AdminOrder[] }) {
               <Badge>{order.status}</Badge>
             </td>
             <td className="p-3 text-sm">
-              {new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium" }).format(
-                new Date(order.createdAt),
-              )}
+              {new Intl.DateTimeFormat("zh-TW", {
+                timeZone: "Asia/Taipei",
+                dateStyle: "medium",
+              }).format(new Date(order.createdAt))}
             </td>
           </tr>
         ))}

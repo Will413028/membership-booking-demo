@@ -18,7 +18,9 @@ const dateString = z
   .string()
   .min(1, "A date and time is required.")
   .refine(
-    (value) => Number.isFinite(Date.parse(value)),
+    (value) =>
+      /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+      Number.isFinite(Date.parse(value)),
     "Enter a valid date and time.",
   );
 
@@ -68,7 +70,16 @@ function authFailure(error: unknown): ActionResult<never> {
   };
 }
 
-function databaseFailure(): ActionResult<never> {
+function databaseFailure(
+  error?: { message?: string } | null,
+): ActionResult<never> {
+  if (error?.message === "CAPACITY_BELOW_BOOKINGS") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fieldErrors: { capacity: "Capacity cannot be below confirmed bookings." },
+    };
+  }
   return { ok: false, code: "DATABASE_ERROR" };
 }
 
@@ -171,7 +182,7 @@ export async function createClassSession(
     })
     .select("id, class_id, starts_at, ends_at, capacity, active")
     .single();
-  if (error || !data) return databaseFailure();
+  if (error || !data) return databaseFailure(error);
 
   revalidateSchedules();
   return {
@@ -227,7 +238,7 @@ export async function updateClassSession(
     .eq("id", parsed.data.id)
     .select("id, class_id, starts_at, ends_at, capacity, active")
     .single();
-  if (error || !data) return databaseFailure();
+  if (error || !data) return databaseFailure(error);
 
   revalidateSchedules();
   return {

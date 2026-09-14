@@ -226,7 +226,7 @@
 
   Check `auth.uid() = membership.user_id`, active membership status, session start time, duplicate confirmed booking, and finite credits before insertion. Decrement credits and insert the booking in the same transaction. `cancel_booking` must check ownership or `has_role('admin')`, reject started/cancelled bookings, set `cancelled_at`, and return one credit in the same transaction for finite plans.
 
-  Add `public.apply_stripe_event` with the exact signature from this task’s interface. It must insert `p_provider_event_id` into `stripe_events` first, return without mutation when the ID already exists, and otherwise update the referenced order／membership／payment rows according to `p_event_type`. The insert and every state change must be inside the same PostgreSQL function transaction; a raised error must roll back the event ledger row.
+  Original implementation uses the eight-argument interface above. Final remediation migration 003 retains that signature as a fail-closed compatibility wrapper and adds `apply_stripe_event_v2` with `p_event_created_at timestamptz`, `p_membership_status public.membership_status`, and `p_payment_status text`. New events require v2 evidence; committed legacy retries remain no-ops. Resolve/lock the order before inserting the FK-backed ledger so missing orders raise ORDER_NOT_FOUND. Ledger insertion and all transitions remain atomic; exceptions roll back the ledger.
 
 - [ ] **Step 5: Add RLS policies and seed data**
 
@@ -401,12 +401,12 @@
 
 - [ ] **Step 5: Implement idempotent webhook event processing**
 
-  In `src/app/api/stripe/webhook/route.ts`, read the raw request body, verify `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)`, return 400 for invalid signatures, and call `processStripeEvent`. `processStripeEvent` extracts only normalized fields from the verified event and calls `public.apply_stripe_event`; the RPC inserts `provider_event_id` and applies the state transition in the same database transaction. A unique conflict for an already committed event returns 200 with no-op behavior, while a failed transition rolls back the event row so Stripe can retry. Do not persist the raw webhook payload.
+  In `src/app/api/stripe/webhook/route.ts`, read the raw request body, verify `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)`, return 400 for invalid signatures, and call `processStripeEvent`. `processStripeEvent` extracts only normalized fields from the verified event and calls `public.apply_stripe_event_v2` with verified payment/status/ordering evidence (migration 003; the original eight-argument wrapper remains fail-closed); the RPC inserts `provider_event_id` and applies the state transition in the same database transaction. A unique conflict for an already committed event returns 200 with no-op behavior, while a failed transition rolls back the event row so Stripe can retry. Do not persist the raw webhook payload.
 
   Implement these exact transitions:
 
-  - `checkout.session.completed`: mark order `paid`; create membership with 8, 1, or null credits; attach Stripe customer／subscription references.
-  - `invoice.paid`: move the subscription membership to `active`, set the new period, and reset finite credits to 8.
+  - `checkout.session.completed` / `checkout.session.async_payment_succeeded`: require payment_status=paid. One-time purchases create one 30-day membership; subscription Checkout records payment but defers credits to invoice.paid.
+  - `invoice.paid`: use the immutable subscription line period for initial subscription grants and strictly newer-period resets. Same-order/same-period retries never reset credits; stale status events and older invoice periods cannot override newer state. Preserve terminal cancellation, including status events arriving before the first invoice.
   - `invoice.payment_failed`: set membership `past_due` and leave the order history intact.
   - `customer.subscription.deleted`: set membership `canceled` with its last valid period preserved.
 

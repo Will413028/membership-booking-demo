@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { studioDateTime, studioInstant } from "@/lib/time/studio";
 
 import { createClassSession, updateClassSession } from "../actions";
 import type {
@@ -15,13 +16,6 @@ import type {
   CreateSessionInput,
   Session,
 } from "../types";
-
-function localDateTime(value: string) {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "";
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
 
 type SessionFormProps = {
   classes: AdminClass[];
@@ -59,8 +53,8 @@ export function SessionForm({ classes, session }: SessionFormProps) {
       const input: CreateSessionInput = {
         classId,
         instructorName,
-        startsAt: typeof startsAt === "string" ? startsAt : "",
-        endsAt: typeof endsAt === "string" ? endsAt : "",
+        startsAt: studioInstant(typeof startsAt === "string" ? startsAt : ""),
+        endsAt: studioInstant(typeof endsAt === "string" ? endsAt : ""),
         capacity: Number(formData.get("capacity")),
       };
       const result: ActionResult<Session> = session
@@ -77,6 +71,10 @@ export function SessionForm({ classes, session }: SessionFormProps) {
       }
       router.push("/admin/schedules");
       router.refresh();
+    } catch {
+      setStatus(
+        "Unable to save this session. Check the studio times and try again.",
+      );
     } finally {
       setPending(false);
     }
@@ -104,9 +102,9 @@ export function SessionForm({ classes, session }: SessionFormProps) {
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="startsAt">Starts</Label>
+          <Label htmlFor="startsAt">Starts (Asia/Taipei)</Label>
           <Input
-            defaultValue={session ? localDateTime(session.startsAt) : ""}
+            defaultValue={session ? studioDateTime(session.startsAt) : ""}
             id="startsAt"
             name="startsAt"
             required
@@ -117,9 +115,9 @@ export function SessionForm({ classes, session }: SessionFormProps) {
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endsAt">Ends</Label>
+          <Label htmlFor="endsAt">Ends (Asia/Taipei)</Label>
           <Input
-            defaultValue={session ? localDateTime(session.endsAt) : ""}
+            defaultValue={session ? studioDateTime(session.endsAt) : ""}
             id="endsAt"
             name="endsAt"
             required

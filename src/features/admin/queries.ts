@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth/guards";
 import { createServerClient } from "@/lib/supabase/server";
+import { studioDateTime, studioInstant } from "@/lib/time/studio";
 
 import type {
   AdminBooking,
@@ -27,6 +28,7 @@ type SessionRecord = {
   capacity: number;
   active: boolean;
   classes: ClassRecord | ClassRecord[] | null;
+  bookings?: Array<{ count: number }>;
 };
 
 export class AdminDataError extends Error {
@@ -46,7 +48,7 @@ function related<T>(value: T | T[] | null): T | null {
 
 function toSchedule(
   row: SessionRecord,
-  confirmedCount = 0,
+  confirmedCount = row.bookings?.[0]?.count ?? 0,
 ): AdminSchedule | null {
   const classRecord = related(row.classes);
   if (!classRecord) return null;
@@ -65,9 +67,9 @@ function toSchedule(
 }
 
 function dayStart(value: Date): Date {
-  const result = new Date(value);
-  result.setHours(0, 0, 0, 0);
-  return result;
+  return new Date(
+    studioInstant(`${studioDateTime(value.toISOString()).slice(0, 10)}T00:00`),
+  );
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
@@ -76,9 +78,9 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
 
   const start = dayStart(new Date());
   const sevenDaysLater = new Date(start);
-  sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+  sevenDaysLater.setUTCDate(sevenDaysLater.getUTCDate() + 7);
   const tomorrow = new Date(start);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
   const [ordersResult, membersResult, bookingsResult, sessionsResult] =
     await Promise.all([
@@ -133,9 +135,9 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
     .filter((session): session is AdminSchedule => session !== null);
   const capacitySummary = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(start);
-    date.setDate(date.getDate() + index);
+    date.setUTCDate(date.getUTCDate() + index);
     const next = new Date(date);
-    next.setDate(next.getDate() + 1);
+    next.setUTCDate(next.getUTCDate() + 1);
     const sessions = schedules.filter(
       (session) =>
         session.startsAt >= date.toISOString() &&
@@ -207,8 +209,9 @@ export async function listAdminSchedules(
   let query = supabase
     .from("class_sessions")
     .select(
-      "id, class_id, starts_at, ends_at, capacity, active, classes!inner(id, name, category, instructor_name, active)",
+      "id, class_id, starts_at, ends_at, capacity, active, classes!inner(id, name, category, instructor_name, active), bookings(count)",
     )
+    .eq("bookings.status", "confirmed")
     .order("starts_at", { ascending: true });
   if (filters.active) query = query.eq("active", filters.active === "active");
 

@@ -1,18 +1,20 @@
 import { BookingList } from "@/features/member/components/booking-list";
 import type { MemberBooking } from "@/features/member/components/member-summary-card";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAccountUser } from "@/lib/auth/account";
+import { DataError } from "@/lib/errors/data";
 import { createServerClient } from "@/lib/supabase/server";
 
 export default async function BookingsPage() {
   const supabase = await createServerClient();
-  const user = await requireUser(supabase);
-  const { data } = await supabase
+  const user = await requireAccountUser("/account/bookings", supabase);
+  const { data, error } = await supabase
     .from("bookings")
     .select(
       "id, status, class_sessions(starts_at, classes(name, instructor_name))",
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+  if (error) throw new DataError();
   const bookings = (
     (data ?? []) as Array<{
       id: string;
@@ -55,7 +57,7 @@ export default async function BookingsPage() {
       </p>
       <h1 className="mt-2 font-display text-4xl font-bold">我的預約</h1>
       <p className="mt-3 text-muted-foreground">
-        取消尚未開始的課程，堂數會自動退回。
+        取消尚未開始的課程，僅在原會員計費期間內退回堂數。
       </p>
       <div className="mt-8">
         <BookingList bookings={bookings} />

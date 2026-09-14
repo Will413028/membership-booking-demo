@@ -7,14 +7,15 @@ import {
   MemberSummaryCard,
 } from "@/features/member/components/member-summary-card";
 import { OrderList } from "@/features/member/components/order-list";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAccountUser } from "@/lib/auth/account";
+import { DataError } from "@/lib/errors/data";
 import { createServerClient } from "@/lib/supabase/server";
 
 async function dashboardData(): Promise<
   MemberDashboardData & { bookings: MemberBooking[] }
 > {
   const supabase = await createServerClient();
-  const user = await requireUser(supabase);
+  const user = await requireAccountUser("/account", supabase);
   const [membershipResult, bookingsResult, ordersResult] = await Promise.all([
     supabase
       .from("memberships")
@@ -26,10 +27,12 @@ async function dashboardData(): Promise<
     supabase
       .from("bookings")
       .select(
-        "id, status, class_sessions(starts_at, classes(name, instructor_name))",
+        "id, status, class_sessions!inner(starts_at, classes(name, instructor_name))",
       )
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
+      .eq("status", "confirmed")
+      .gt("class_sessions.starts_at", new Date().toISOString())
+      .order("class_sessions(starts_at)", { ascending: true })
       .limit(8),
     supabase
       .from("orders")
@@ -40,6 +43,8 @@ async function dashboardData(): Promise<
       .order("created_at", { ascending: false })
       .limit(3),
   ]);
+  if (membershipResult.error || bookingsResult.error || ordersResult.error)
+    throw new DataError();
   const bookings = (
     (bookingsResult.data ?? []) as Array<{
       id: string;
@@ -143,7 +148,10 @@ export default async function AccountPage() {
       </div>
       <div className="grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
         <MemberSummaryCard data={data} />
-        <div className="rounded-3xl bg-paper p-6">
+        <section
+          aria-label="即將到來的預約"
+          className="rounded-3xl bg-paper p-6"
+        >
           <h2 className="font-display text-2xl font-bold">即將到來的預約</h2>
           <div className="mt-5">
             <BookingList
@@ -158,7 +166,7 @@ export default async function AccountPage() {
           >
             查看所有預約 →
           </Link>
-        </div>
+        </section>
       </div>
       <section>
         <h2 className="font-display text-3xl font-bold">最近訂單</h2>

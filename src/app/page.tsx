@@ -35,10 +35,10 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="rounded-[2rem] bg-olive p-8 text-paper md:rotate-2">
-            <p className="text-sm text-paper/70">今日開放名額</p>
-            <p className="mt-8 font-display text-6xl font-bold">12</p>
+            <p className="text-sm text-paper/70">找到你的練習節奏</p>
+            <p className="mt-8 font-display text-6xl font-bold">Move</p>
             <p className="mt-2 text-paper/80">
-              個位置，等你伸展、呼吸、重新對齊。
+              伸展、呼吸、重新對齊。即時名額請查看課表。
             </p>
           </div>
         </section>

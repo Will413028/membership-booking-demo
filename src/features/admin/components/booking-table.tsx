@@ -18,6 +18,7 @@ import type { AdminBooking } from "../types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -39,7 +40,7 @@ export function BookingTable({ bookings }: { bookings: AdminBooking[] }) {
     setMessage(
       result.creditsRemaining === null
         ? "Booking cancelled."
-        : `Booking cancelled. Restored credits: ${result.creditsRemaining}.`,
+        : `Booking cancelled. Remaining credits: ${result.creditsRemaining}.`,
     );
     router.refresh();
   };
@@ -72,6 +73,7 @@ export function BookingTable({ bookings }: { bookings: AdminBooking[] }) {
             <tr
               className="border-b border-border last:border-0"
               key={booking.id}
+              data-testid={`booking-${booking.id}`}
             >
               <td className="p-3 font-semibold">{booking.memberName}</td>
               <td className="p-3">{booking.className}</td>

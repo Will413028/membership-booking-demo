@@ -1,3 +1,4 @@
+import { DataError } from "@/lib/errors/data";
 import {
   createServerClient,
   type ServerSupabaseClient,
@@ -28,9 +29,8 @@ export async function getCurrentUser(
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile || !isAppRole(profile.role)) {
-    return null;
-  }
+  if (profileError || !profile || !isAppRole(profile.role))
+    throw new DataError();
 
   return { id: user.id, email: user.email ?? null, role: profile.role };
 }

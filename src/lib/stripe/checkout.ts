@@ -47,6 +47,9 @@ export function buildCheckoutSessionParams({
     customer_email: customerEmail ?? undefined,
     line_items: [{ price: stripePriceId, quantity: 1 }],
     metadata: { orderId },
+    ...(plan.billingType === "subscription"
+      ? { subscription_data: { metadata: { orderId } } }
+      : {}),
     success_url: `${appUrl}/checkout/success?order_id=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/checkout/cancel?order_id=${orderId}`,
   };

@@ -15,6 +15,7 @@ import type { MemberBooking } from "./member-summary-card";
 
 function date(value: string) {
   return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -35,7 +36,7 @@ export function BookingList({ bookings }: { bookings: MemberBooking[] }) {
   const cancel = (bookingId: string) =>
     startTransition(async () => {
       const result = await cancelAccountBooking({ bookingId });
-      setNotice(result.ok ? "預約已取消，堂數已退回。" : result.message);
+      setNotice(result.ok ? "預約已取消。" : result.message);
     });
   return (
     <div className="space-y-4">
@@ -65,7 +66,7 @@ export function BookingList({ bookings }: { bookings: MemberBooking[] }) {
                   確定取消這堂課？
                 </h2>
                 <p className="mt-3 text-muted-foreground">
-                  尚未開始的預約會退回一堂額度。
+                  尚未開始且仍在原會員計費期間的預約會退回一堂額度。
                 </p>
                 <div className="mt-6 flex justify-end gap-3">
                   <DialogClose className="rounded-full px-4 py-2 font-semibold">

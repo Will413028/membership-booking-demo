@@ -22,7 +22,11 @@ export function MemberTable({ members }: { members: AdminMember[] }) {
       </thead>
       <tbody>
         {members.map((member) => (
-          <tr className="border-b border-border last:border-0" key={member.id}>
+          <tr
+            data-testid={`member-${member.id}`}
+            className="border-b border-border last:border-0"
+            key={member.id}
+          >
             <td className="p-3 font-semibold">{member.fullName}</td>
             <td className="p-3">
               {member.membershipStatus ? (
@@ -35,6 +39,7 @@ export function MemberTable({ members }: { members: AdminMember[] }) {
             <td className="p-3 text-sm">
               {member.currentPeriodEnd
                 ? new Intl.DateTimeFormat("zh-TW", {
+                    timeZone: "Asia/Taipei",
                     dateStyle: "medium",
                   }).format(new Date(member.currentPeriodEnd))
                 : "—"}

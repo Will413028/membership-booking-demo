@@ -106,11 +106,10 @@ async function createSeedUser(
     throw new Error("E2E seed could not create a test auth user.");
   }
 
-  const { error: profileError } = await client.from("profiles").upsert({
-    id: data.user.id,
+  const { error: profileError } = await client.from("profiles").update({
     full_name: `E2E ${input.role}`,
     role: input.role,
-  });
+  }).eq("id", data.user.id);
   if (profileError) {
     throw new Error("E2E seed could not create the test profile.");
   }

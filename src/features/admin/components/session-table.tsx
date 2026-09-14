@@ -13,6 +13,7 @@ import type { AdminSchedule } from "../types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

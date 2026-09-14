@@ -54,6 +54,14 @@ function sessionClient() {
     }
     if (table === "class_sessions") {
       return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({
+              data: { class_id: "class-1" },
+              error: null,
+            }),
+          }),
+        }),
         insert: () => ({ select: () => ({ single: insertSingle }) }),
         update: () => ({
           eq: () => ({
@@ -112,6 +120,32 @@ function dashboardClient({
 }
 
 describe("admin server actions", () => {
+  it("rejects offset-less studio dates before writing", async () => {
+    const db = sessionClient();
+    createServerClient.mockResolvedValue(db.client);
+    const result = await createClassSession({
+      ...validSession,
+      startsAt: "2030-06-01T09:00",
+    });
+    expect(result).toMatchObject({ ok: false, code: "VALIDATION_ERROR" });
+    expect(db.from).not.toHaveBeenCalled();
+  });
+
+  it("maps the database capacity invariant to a safe field error", async () => {
+    const db = sessionClient();
+    db.insertSingle.mockResolvedValue({
+      data: null,
+      error: { message: "CAPACITY_BELOW_BOOKINGS" },
+    });
+    createServerClient.mockResolvedValue(db.client);
+    expect(
+      await updateClassSession({ id: "session-1", ...validSession }),
+    ).toMatchObject({
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fieldErrors: { capacity: "Capacity cannot be below confirmed bookings." },
+    });
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     requireAdmin.mockResolvedValue({

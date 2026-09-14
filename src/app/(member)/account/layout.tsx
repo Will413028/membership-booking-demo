@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-import { requireUser } from "@/lib/auth/guards";
+import { requireAccountUser } from "@/lib/auth/account";
 
 export default async function AccountLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireUser();
+  const user = await requireAccountUser("/account");
   return (
     <div className="min-h-screen bg-sage">
       <header className="border-b border-border bg-paper">

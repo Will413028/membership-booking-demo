@@ -22,6 +22,21 @@ function createClient(user: AuthUser, profile: Profile): ServerSupabaseClient {
 }
 
 describe("auth guards", () => {
+  it("accepts the member profile created at signup", async () => {
+    await expect(
+      requireUser(
+        createClient(
+          { id: "new", email: "new@example.test" },
+          { role: "member" },
+        ),
+      ),
+    ).resolves.toMatchObject({ id: "new", role: "member" });
+  });
+  it("does not silently treat a missing profile as logged-out", async () => {
+    await expect(
+      requireUser(createClient({ id: "new", email: "new@example.test" }, null)),
+    ).rejects.toThrow("Unable to load data.");
+  });
   it("rejects an unauthenticated request before loading a profile", async () => {
     const mockUnauthenticatedClient = createClient(null, null);
 

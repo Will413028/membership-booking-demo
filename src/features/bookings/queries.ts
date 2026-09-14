@@ -1,3 +1,4 @@
+import { DataError } from "@/lib/errors/data";
 import type { ServerSupabaseClient } from "@/lib/supabase/server";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -33,21 +34,28 @@ function isActiveMembership(value: unknown): value is DatabaseMembership {
 export async function getActiveMembership(
   userId: string,
   client?: ServerSupabaseClient,
+  includeExhausted = false,
 ): Promise<ActiveMembership | null> {
   const supabase = client ?? (await createServerClient());
-  const { data, error } = await supabase
+  const now = new Date().toISOString();
+  let query = supabase
     .from("memberships")
     .select("id, status, credits_remaining, current_period_end")
     .eq("user_id", userId)
     .eq("status", "active")
-    .gt("current_period_end", new Date().toISOString())
-    .order("current_period_end", { ascending: false })
+    .lte("current_period_start", now)
+    .gt("current_period_end", now);
+  if (!includeExhausted)
+    query = query.or("credits_remaining.is.null,credits_remaining.gt.0");
+  const { data, error } = await query
+    .order("current_period_end", { ascending: true })
+    .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  if (error || !isActiveMembership(data)) {
-    return null;
-  }
+  if (error) throw new DataError();
+  if (!data) return null;
+  if (!isActiveMembership(data)) throw new DataError();
 
   return {
     id: data.id,

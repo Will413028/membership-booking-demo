@@ -14,14 +14,14 @@ test.describe("member booking", () => {
     await expect(memberPage.getByText("預約已確認")).toBeVisible();
 
     await memberPage.goto("/account");
-    await expect(memberPage.getByText("E2E Member Flow")).toBeVisible();
+    await expect(memberPage.getByRole("region", { name: "即將到來的預約" }).getByText("E2E Member Flow", { exact: true })).toBeVisible();
     await expect(memberPage.getByText("7 堂剩餘")).toBeVisible();
 
     await memberPage.getByRole("link", { name: "查看所有預約" }).click();
     await memberPage.getByRole("button", { name: "取消預約" }).click();
     await memberPage.getByRole("button", { name: "確認取消" }).click();
-    await expect(memberPage.getByText("預約已取消，堂數已退回。")).toBeVisible();
-    await expect(memberPage.getByText("已取消")).toBeVisible();
+    await expect(memberPage.getByText("預約已取消。")).toBeVisible();
+    await expect(memberPage.getByText("已取消", { exact: true })).toBeVisible();
 
     await memberPage.goto("/account");
     await expect(memberPage.getByText("8 堂剩餘")).toBeVisible();

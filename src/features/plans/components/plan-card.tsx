@@ -36,7 +36,11 @@ export function PlanCard({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const creditSummary =
-    plan.classCredits === null ? "不限堂數" : `每月 ${plan.classCredits} 堂`;
+    plan.billingType === "one_time"
+      ? `${plan.classCredits} 堂，付款後 30 天有效`
+      : plan.classCredits === null
+        ? "不限堂數"
+        : `每月 ${plan.classCredits} 堂`;
   const choosePlan = () =>
     startTransition(async () => {
       setError(null);
@@ -56,7 +60,7 @@ export function PlanCard({
       }
     });
   return (
-    <Card className="flex h-full flex-col">
+    <Card data-testid={`plan-${plan.code}`} className="flex h-full flex-col">
       <p className="text-sm font-bold uppercase tracking-[0.16em] text-coral">
         {plan.billingType === "subscription" ? "月訂閱" : "單次體驗"}
       </p>

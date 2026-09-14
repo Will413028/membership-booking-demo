@@ -1,6 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth/guards";
+import { DataError } from "@/lib/errors/data";
 import { createServerClient } from "@/lib/supabase/server";
 
 import type { OrderStatusView } from "./types";
@@ -17,32 +18,25 @@ export async function getOrderStatus(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (orderError || !order) {
+  if (orderError) throw new DataError();
+  if (!order) {
     throw new Error("Order not found.");
   }
 
-  const { data: item } = await supabase
-    .from("order_items")
-    .select("plan_id")
-    .eq("order_id", order.id)
-    .limit(1)
+  const { data: membership, error: membershipError } = await supabase
+    .from("memberships")
+    .select("status, current_period_start, current_period_end")
+    .eq("user_id", user.id)
+    .eq("source_order_id", order.id)
     .maybeSingle();
-  const { data: membership } = item?.plan_id
-    ? await supabase
-        .from("memberships")
-        .select("status, current_period_end")
-        .eq("user_id", user.id)
-        .eq("plan_id", item.plan_id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
+  if (membershipError) throw new DataError();
 
   return {
     orderId: order.id,
     status: order.status,
     membershipActive:
       membership?.status === "active" &&
+      new Date(membership.current_period_start).getTime() <= Date.now() &&
       new Date(membership.current_period_end).getTime() > Date.now(),
   };
 }

@@ -1,3 +1,4 @@
+import { DataError } from "@/lib/errors/data";
 import { createServerClient } from "@/lib/supabase/server";
 
 import type {
@@ -55,7 +56,7 @@ function toClassSession(
 async function confirmedCounts(
   sessionIds: string[],
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-): Promise<Map<string, number> | null> {
+): Promise<Map<string, number>> {
   if (sessionIds.length === 0) {
     return new Map();
   }
@@ -65,7 +66,7 @@ async function confirmedCounts(
     .select("session_id, confirmed_count")
     .in("session_id", sessionIds);
   if (error || !data) {
-    return null;
+    throw new DataError();
   }
 
   return new Map(
@@ -108,7 +109,7 @@ export async function listUpcomingSessions(
 
   const { data, error } = await query.order("starts_at", { ascending: true });
   if (error || !data) {
-    return [];
+    throw new DataError();
   }
 
   const sessions = data as unknown as DatabaseSession[];
@@ -116,9 +117,6 @@ export async function listUpcomingSessions(
     sessions.map((session) => session.id),
     supabase,
   );
-  if (!counts) {
-    return [];
-  }
 
   return sessions.map((session) =>
     toClassSession(session, counts.get(session.id) ?? 0),
@@ -138,14 +136,10 @@ export async function getSessionDetails(
     .eq("classes.active", true)
     .maybeSingle();
 
-  if (error || !data) {
-    return null;
-  }
+  if (error) throw new DataError();
+  if (!data) return null;
 
   const counts = await confirmedCounts([sessionId], supabase);
-  if (!counts) {
-    return null;
-  }
 
   const session = toClassSession(
     data as unknown as DatabaseSession,

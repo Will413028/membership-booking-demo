@@ -14,6 +14,30 @@ vi.mock("@/lib/stripe/server", () => ({ getStripeClient }));
 import { POST } from "./route";
 
 describe("POST /api/stripe/webhook", () => {
+  it("passes only the verified event and keeps processing errors safe/retryable", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+    const event = { id: "evt_verified", livemode: false };
+    constructEvent.mockReturnValue(event);
+    processStripeEvent
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("private detail"));
+    const request = () =>
+      new Request("https://motion-room.test/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "signed" },
+        body: "raw test body",
+      });
+    expect((await POST(request())).status).toBe(200);
+    expect(constructEvent).toHaveBeenCalledWith(
+      "raw test body",
+      "signed",
+      "whsec_test",
+    );
+    expect(processStripeEvent).toHaveBeenCalledWith(event);
+    const failed = await POST(request());
+    expect(failed.status).toBe(500);
+    expect(await failed.text()).toBe("Unable to process Stripe event.");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();

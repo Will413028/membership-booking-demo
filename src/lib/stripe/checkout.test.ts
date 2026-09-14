@@ -24,6 +24,7 @@ describe("buildCheckoutSessionParams", () => {
       mode: "subscription",
       customer_email: "member@example.com",
       metadata: { orderId: "order-1" },
+      subscription_data: { metadata: { orderId: "order-1" } },
       success_url:
         "https://motion-room.test/checkout/success?order_id=order-1&session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "https://motion-room.test/checkout/cancel?order_id=order-1",

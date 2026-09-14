@@ -1,18 +1,20 @@
 import type { MemberOrder } from "@/features/member/components/member-summary-card";
 import { OrderList } from "@/features/member/components/order-list";
-import { requireUser } from "@/lib/auth/guards";
+import { requireAccountUser } from "@/lib/auth/account";
+import { DataError } from "@/lib/errors/data";
 import { createServerClient } from "@/lib/supabase/server";
 
 export default async function OrdersPage() {
   const supabase = await createServerClient();
-  const user = await requireUser(supabase);
-  const { data } = await supabase
+  const user = await requireAccountUser("/account/orders", supabase);
+  const { data, error } = await supabase
     .from("orders")
     .select(
       "id, status, amount_twd_cents, created_at, order_items(plans(name))",
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+  if (error) throw new DataError();
   const orders = (
     (data ?? []) as Array<{
       id: string;

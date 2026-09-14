@@ -29,7 +29,27 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (
+    !user &&
+    (request.nextUrl.pathname === "/account" ||
+      request.nextUrl.pathname.startsWith("/account/"))
+  ) {
+    const login = new URL("/login", request.url);
+    const allowed = ["/account", "/account/bookings", "/account/orders"];
+    login.searchParams.set(
+      "next",
+      allowed.includes(request.nextUrl.pathname)
+        ? request.nextUrl.pathname
+        : "/account",
+    );
+    const redirect = NextResponse.redirect(login);
+    for (const cookie of response.cookies.getAll())
+      redirect.cookies.set(cookie);
+    return redirect;
+  }
 
   return response;
 }

@@ -3,6 +3,12 @@
 日期：2026-09-15  
 狀態：設計已由使用者確認，待 implementation plan
 
+### Final remediation contract（2026-09-15）
+
+Whole-branch review 修正後，以此段及 README 的 Database RPC compatibility 為事件／交易契約補充：八參數 `apply_stripe_event` 保留為 fail-closed compatibility wrapper；新 webhook 使用十一參數 `apply_stripe_event_v2`，追加 event.created、actual membership status、payment_status。兩者僅 service_role 可執行。未付款 Checkout 不授予資格；月訂閱首次授權與續期只取 paid invoice 的 line period，同 order 唯一 membership、同 period 不重設堂數，舊 invoice 不清除較新週期欠款；subscription status 事件不延長 paid period。第一張 paid invoice 前收到的 status 也會保存，取消為 terminal，同秒衝突採保守排序。
+
+Signup trigger 固定建立 member profile；預約記錄扣堂 period，只於同 period 退堂；DB 同時檢查 parent class active 及 capacity 不低於 confirmed bookings。Admin 表單統一 Asia/Taipei 時間，傳輸／儲存 explicit instant。以上不增加 trial、proration 或真金流 scope。
+
 ## Context
 
 這是一個用於爭取網站架設接案的獨立展示專案，模擬台北質感皮拉提斯／瑜伽工作室的會員預約系統。案件需求包含會員、預約、後台管理、下訂單結帳與美感網站；本專案以能展示完整端到端流程為成功標準，而不以生產環境的所有營運功能為目標。

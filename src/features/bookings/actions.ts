@@ -108,7 +108,10 @@ export async function createBooking(input: {
 
   const membership = await getActiveMembership(user.id, supabase);
   if (!membership) {
-    return bookingFailure("MEMBERSHIP_INACTIVE");
+    const exhausted = await getActiveMembership(user.id, supabase, true);
+    return bookingFailure(
+      exhausted ? "CREDITS_INSUFFICIENT" : "MEMBERSHIP_INACTIVE",
+    );
   }
 
   try {
