@@ -98,7 +98,7 @@ E2E browser, Supabase/DB, Stripe, Docker, network, dev server, and manual runtim
 
 ## Final remediation
 
-This section supersedes earlier verification/deferred notes. Scope: existing `main` checkout at base `d1725961c3f8d6544e58805f0fb7d3f3a8640929`; one remediation commit, no worktree, parent/wiki edits, reset/stash/clean/force or push. Unrelated `supabase/.temp/` is preserved. All 15 findings were verified against implementation; none was dismissed as technically wrong. Self-review followed the code-review/verification skills; no independent reviewer subagent was available, so this is not a second-reviewer approval.
+This section supersedes earlier verification/deferred notes. Scope: existing `main` checkout at base `d1725961c3f8d6544e58805f0fb7d3f3a8640929`; one remediation commit, no worktree, parent/wiki edits, reset/stash/clean/force or push. Unrelated `supabase/.temp/` is preserved. All 15 findings were verified against implementation; none was dismissed as technically wrong. Self-review followed the code-review/verification skills; the independent scoped re-review is recorded below.
 
 ### Finding-by-finding self-review
 
@@ -211,3 +211,7 @@ supabase/tests/postgrest.test.ts
 supabase/tests/query_memberships.sql
 .superpowers/sdd/2026-09-15-membership-booking-demo/task-8-report.md
 ```
+
+### Scoped final re-review
+
+An independent scoped re-review of `d172596..b45db47` verified all 15 prior Critical/Important findings as addressed and found no new production Critical/Important breakage. It found one Important test-harness issue: `supabase/tests/query_memberships.sql` is discovered by standard `supabase test db` but depends on fixtures rolled back by `booking_invariants.sql`; it is parked for a later harness cleanup after the single permitted final fix wave.
