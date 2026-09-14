@@ -166,6 +166,7 @@
 - Produces PostgreSQL RPC `public.book_session(p_session_id uuid, p_membership_id uuid)` returning `{ booking_id uuid, credits_remaining integer }` where `credits_remaining` is nullable for unlimited plans.
 - Produces PostgreSQL RPC `public.cancel_booking(p_booking_id uuid)` returning `{ booking_id uuid, credits_remaining integer }`.
 - Produces `public.has_role(required_role text)` for RLS policies without recursive `profiles` policy queries.
+- Produces PostgreSQL RPC `public.apply_stripe_event(p_provider_event_id text, p_event_type text, p_order_id uuid, p_customer_id text, p_subscription_id text, p_period_start timestamptz, p_period_end timestamptz, p_payment_reference text)`; event insertion and the order／membership／payment transition occur in one transaction.
 
 - [ ] **Step 1: Write the database invariant test before the migration**
 
@@ -207,7 +208,7 @@
 
   Add checks for non-negative `amount_twd_cents`, positive session capacity, `credits_remaining <= credits_total` when credits are finite, and `ends_at > starts_at`. Store `order_items.unit_amount_twd_cents` as the paid-price snapshot.
 
-- [ ] **Step 4: Add `has_role`, `book_session` and `cancel_booking` transaction functions**
+- [ ] **Step 4: Add `has_role`, `book_session`, `cancel_booking` and Stripe event transaction functions**
 
   The booking function must lock the selected session before counting confirmed bookings and updating membership credits:
 
@@ -224,6 +225,8 @@
   ```
 
   Check `auth.uid() = membership.user_id`, active membership status, session start time, duplicate confirmed booking, and finite credits before insertion. Decrement credits and insert the booking in the same transaction. `cancel_booking` must check ownership or `has_role('admin')`, reject started/cancelled bookings, set `cancelled_at`, and return one credit in the same transaction for finite plans.
+
+  Add `public.apply_stripe_event` with the exact signature from this task’s interface. It must insert `p_provider_event_id` into `stripe_events` first, return without mutation when the ID already exists, and otherwise update the referenced order／membership／payment rows according to `p_event_type`. The insert and every state change must be inside the same PostgreSQL function transaction; a raised error must roll back the event ledger row.
 
 - [ ] **Step 5: Add RLS policies and seed data**
 
@@ -297,7 +300,7 @@
 - Produces `createServerClient(): Promise<ServerSupabaseClient>` with cookie read／write support.
 - Produces `createAdminClient(): AdminSupabaseClient` for server-only webhook／admin operations.
 - Produces `getCurrentUser(client?): Promise<SessionUser | null>`, `requireUser(client?): Promise<SessionUser>`, and `requireAdmin(client?): Promise<SessionUser>`.
-- `SessionUser` is `{ id: string; email: string | null; role: "member" | "admin" }`.
+- `SessionUser` is `{ id: string; email: string | null; role: "member" | "admin" }`. The three session functions accept an optional `ServerSupabaseClient` for tests and create one internally when omitted.
 
 - [ ] **Step 1: Write guard tests for member, admin and unauthenticated paths**
 
@@ -398,7 +401,7 @@
 
 - [ ] **Step 5: Implement idempotent webhook event processing**
 
-  In `src/app/api/stripe/webhook/route.ts`, read the raw request body, verify `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)`, return 400 for invalid signatures, and call `processStripeEvent`. Insert `provider_event_id` and apply the state transition in the same database transaction; a unique conflict for an already committed event returns 200 with no-op behavior, while a failed transition rolls back the event row so Stripe can retry.
+  In `src/app/api/stripe/webhook/route.ts`, read the raw request body, verify `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)`, return 400 for invalid signatures, and call `processStripeEvent`. `processStripeEvent` extracts only normalized fields from the verified event and calls `public.apply_stripe_event`; the RPC inserts `provider_event_id` and applies the state transition in the same database transaction. A unique conflict for an already committed event returns 200 with no-op behavior, while a failed transition rolls back the event row so Stripe can retry. Do not persist the raw webhook payload.
 
   Implement these exact transitions:
 
@@ -658,7 +661,6 @@
 - Modify: `playwright.config.ts`
 - Modify: `README.md`
 - Modify: `.env.example`
-- Modify: `wiki/projects/membership-booking-demo/index.md`
 
 **Interfaces:**
 - `e2e/fixtures.ts` provides authenticated `memberPage` and `adminPage` fixtures using test-only seeded accounts; credentials come from environment variables, never source files.
@@ -708,9 +710,9 @@
 
   Run `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm exec playwright test`, `supabase test db`, and the manual Stripe test flow. Inspect the rendered UI at 375px and 1440px widths; verify keyboard navigation, loading／empty／error states, and that no secret-like value appears in the browser bundle or logs.
 
-- [ ] **Step 7: Update the project page with evidence**
+- [ ] **Step 7: Run the final repository hygiene checks**
 
-  Replace the project page `Current Status` with the shipped state, add the final routes／commands under `Key Files & Paths`, and add only concrete lessons discovered during implementation under `Lessons Learned`. Do not mark any external verification as `verified` without the corresponding process or human review.
+  Run `git diff --check`, `git status --short`, `pnpm lint`, `pnpm test`, and `pnpm build` after the E2E run. Confirm that only files listed by this task and the plan’s previous tasks changed, `.env.example` contains names but no values, and the browser bundle contains no service-role or Stripe secret.
 
 - [ ] **Step 8: Commit the delivery deliverable**
 

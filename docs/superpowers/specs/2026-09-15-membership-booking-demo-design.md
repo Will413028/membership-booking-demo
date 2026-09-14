@@ -112,7 +112,7 @@
 - `features/`：plans、memberships、classes、bookings、orders 的讀寫與 domain rules。
 - `supabase/migrations/`：schema、constraint、RLS；`supabase/seed.sql`：可重現展示資料。
 
-Next.js server actions／route handlers 是唯一的寫入入口。Supabase anon client 可在需要時供使用者讀取受 RLS 保護的資料；service-role key 只在 server-side webhook 與明確的管理操作使用。
+Next.js server actions／route handlers 是唯一的寫入入口。Supabase anon client 可在需要時供使用者讀取受 RLS 保護的資料；service-role key 只在 server-side webhook 與明確的管理操作使用。Stripe webhook 的 normalized event 由 server 呼叫資料庫 transaction RPC，讓 event ledger 與訂單／會員狀態在同一 transaction 內完成。
 
 ## Data model
 
