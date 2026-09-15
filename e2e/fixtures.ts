@@ -329,7 +329,7 @@ async function login(
   await page.getByLabel("Email").fill(credentials.email);
   await page.getByLabel("密碼").fill(credentials.password);
   await page.getByRole("button", { name: "登入" }).click();
-  await page.waitForURL("**/account");
+  await page.waitForURL((url) => url.pathname === "/account");
 }
 
 export const test = base.extend<E2EFixtures>({

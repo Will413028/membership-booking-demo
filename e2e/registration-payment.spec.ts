@@ -16,7 +16,7 @@ async function register(page: Page) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("密碼").fill(process.env.E2E_MEMBER_PASSWORD ?? "");
   await page.getByRole("button", {name: "建立帳號", exact: true}).click();
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL((url) => url.pathname === "/account");
   const {data, error} = await serviceClient().auth.admin.listUsers({perPage: 1000});
   expect(error).toBeNull();
   const user = data.users.find(candidate => candidate.email === email);
@@ -114,7 +114,7 @@ for (const plan of [
     await page.getByLabel("Email").fill(process.env.E2E_ADMIN_EMAIL ?? "");
     await page.getByLabel("密碼").fill(process.env.E2E_ADMIN_PASSWORD ?? "");
     await page.getByRole("button", {name: "登入", exact: true}).click();
-    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page).toHaveURL((url) => url.pathname === "/admin");
     await page.goto("/admin/orders");
     await expect(page.getByTestId(`order-${pending.data.id}`)).toContainText("paid");
     await page.goto("/admin/members");
