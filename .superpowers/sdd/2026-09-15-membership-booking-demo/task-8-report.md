@@ -208,10 +208,16 @@ supabase/tests/booking_invariants.sql
 supabase/tests/concurrency.mjs
 supabase/tests/postgrest.config.ts
 supabase/tests/postgrest.test.ts
-supabase/tests/query_memberships.sql
+supabase/harness/query_memberships.sql
 .superpowers/sdd/2026-09-15-membership-booking-demo/task-8-report.md
 ```
 
 ### Scoped final re-review
 
 An independent scoped re-review of `d172596..b45db47` verified all 15 prior Critical/Important findings as addressed and found no new production Critical/Important breakage. It found one Important test-harness issue: `supabase/tests/query_memberships.sql` is discovered by standard `supabase test db` but depends on fixtures rolled back by `booking_invariants.sql`; it is parked for a later harness cleanup after the single permitted final fix wave.
+
+### Post-review harness cleanup
+
+The parked harness issue was closed after the final review: the fixture-dependent helper moved to `supabase/harness/query_memberships.sql`, outside standard `supabase test db` discovery, and README now identifies it as a manually applied standalone PostgREST harness helper. Fixture contents and all production, RLS and Stripe behavior are unchanged.
+
+Post-cleanup verification on `2026-09-15`: `pnpm test` passed 28 files / 154 tests; `pnpm lint` checked 118 files with no fixes; `pnpm build` completed successfully with only the existing middleware-to-proxy deprecation warning; `pnpm exec playwright test --list` listed 14 tests in 4 files; reference inspection found no active use of the former `supabase/tests/query_memberships.sql` path; and `git diff --check` passed. Docker, Stripe and credential-dependent flows were not started.

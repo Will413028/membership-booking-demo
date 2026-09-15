@@ -94,7 +94,7 @@ pnpm e2e
 
 DB 驗證可在 local Supabase 執行 `supabase test db`。沒有完整 Supabase CLI 時，也能在獨立、可拋棄的 Supabase PostgreSQL 17 container 依序套用三個 migrations、seed、建立 `pgtap` extension，再用 `psql -At -v ON_ERROR_STOP=1` 執行 `supabase/tests/booking_invariants.sql`；必須同時檢查 TAP 的 `not ok` 與 plan count，不能只看 psql exit code。
 
-獨立 PostgREST integration harness：只在 task-owned disposable DB 將 pgTAP fixture 最後的 rollback 轉為 commit，套 `supabase/tests/query_memberships.sql`，並將 service-role-only PostgREST 綁在 `127.0.0.1:55434`（不對外開放）。執行 `PGTAP_REST_URL=http://127.0.0.1:55434 pnpm exec vitest run --config supabase/tests/postgrest.config.ts`，再跑 `node supabase/tests/concurrency.mjs <task-owned-container>`。後者要求 container 名稱以 `membership-remediation-` 開頭且 label `task=membership-remediation`，會改動 fixture，重跑需新 disposable DB。它驗證兩連線搶位與容量調整競爭；PostgREST harness 驗證真實 embedding／排序，不宣稱其 auth stub 是 RLS 測試。RLS coverage 在 pgTAP 使用實際 SET ROLE。
+獨立 PostgREST integration harness：只在 task-owned disposable DB 將 pgTAP fixture 最後的 rollback 轉為 commit，再手動套用 `supabase/harness/query_memberships.sql`，並將 service-role-only PostgREST 綁在 `127.0.0.1:55434`（不對外開放）。這個 helper 刻意放在 `supabase/tests/` 之外，不屬於也不會被標準 `supabase test db` 發現。執行 `PGTAP_REST_URL=http://127.0.0.1:55434 pnpm exec vitest run --config supabase/tests/postgrest.config.ts`，再跑 `node supabase/tests/concurrency.mjs <task-owned-container>`。後者要求 container 名稱以 `membership-remediation-` 開頭且 label `task=membership-remediation`，會改動 fixture，重跑需新 disposable DB。它驗證兩連線搶位與容量調整競爭；PostgREST harness 驗證真實 embedding／排序，不宣稱其 auth stub 是 RLS 測試。RLS coverage 在 pgTAP 使用實際 SET ROLE。
 
 ## Phase 2 boundaries
 
