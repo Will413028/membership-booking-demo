@@ -50,5 +50,7 @@ test("shows the server action message and disables a full session", async () => 
   );
 
   rerender(<BookingButton sessionId="session-1" full />);
-  expect(screen.getByRole("button", { name: "本堂已額滿" })).toBeDisabled();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "本堂已額滿" })).toBeDisabled(),
+  );
 });
