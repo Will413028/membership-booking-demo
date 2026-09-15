@@ -27,7 +27,10 @@ function getCredentials(formData: FormData) {
   });
 }
 
-export async function login(formData: FormData): Promise<AuthActionState> {
+export async function login(
+  _previousState: AuthActionState | null,
+  formData: FormData,
+): Promise<AuthActionState> {
   const credentials = getCredentials(formData);
 
   if (!credentials.success) {

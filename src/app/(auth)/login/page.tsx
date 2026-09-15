@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState<
     AuthActionState | null,
     FormData
-  >(async (_previous, formData) => login(formData), null);
+  >(login, null);
   return (
     <main className="auth-shell">
       <form

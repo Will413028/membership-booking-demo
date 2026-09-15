@@ -46,19 +46,19 @@ beforeEach(() => {
 
 describe("login", () => {
   test("redirects a successful login to a safe continuation path", async () => {
-    await login(credentials("/plans"));
+    await login(null, credentials("/plans"));
 
     expect(mocks.redirect).toHaveBeenCalledWith("/plans");
   });
 
   test("redirects a successful login without a continuation path to account", async () => {
-    await login(credentials());
+    await login(null, credentials());
 
     expect(mocks.redirect).toHaveBeenCalledWith("/account");
   });
 
   test("rejects an external-looking continuation path after a successful login", async () => {
-    await login(credentials("//external.example"));
+    await login(null, credentials("//external.example"));
 
     expect(mocks.redirect).toHaveBeenCalledWith("/account");
   });
@@ -66,28 +66,43 @@ describe("login", () => {
   test.each(unsafeNextValues)(
     "rejects an unsafe continuation path after a successful login: %s",
     async (next) => {
-      await login(credentials(next));
+      await login(null, credentials(next));
 
       expect(mocks.redirect).toHaveBeenCalledWith("/account");
     },
   );
+
+  test("returns validation errors when FormData is the action-state payload", async () => {
+    const formData = new FormData();
+    formData.set("email", "not-an-email");
+    formData.set("password", "short");
+
+    await expect(login(null, formData)).resolves.toEqual({
+      ok: false,
+      fieldErrors: {
+        email: ["Enter a valid email address."],
+        password: ["Password must be at least 8 characters."],
+      },
+    });
+    expect(mocks.signInWithPassword).not.toHaveBeenCalled();
+  });
 });
 
 describe("signup", () => {
   test("redirects a successful signup to a safe continuation path", async () => {
-    await signup(credentials("/plans"));
+    await signup(null, credentials("/plans"));
 
     expect(mocks.redirect).toHaveBeenCalledWith("/plans");
   });
 
   test("redirects a successful signup without a continuation path to account", async () => {
-    await signup(credentials());
+    await signup(null, credentials());
 
     expect(mocks.redirect).toHaveBeenCalledWith("/account");
   });
 
   test("rejects an external-looking continuation path after a successful signup", async () => {
-    await signup(credentials("//external.example"));
+    await signup(null, credentials("//external.example"));
 
     expect(mocks.redirect).toHaveBeenCalledWith("/account");
   });
@@ -95,7 +110,7 @@ describe("signup", () => {
   test.each(unsafeNextValues)(
     "rejects an unsafe continuation path after a successful signup: %s",
     async (next) => {
-      await signup(credentials(next));
+      await signup(null, credentials(next));
 
       expect(mocks.redirect).toHaveBeenCalledWith("/account");
     },

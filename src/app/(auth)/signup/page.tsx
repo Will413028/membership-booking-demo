@@ -19,7 +19,7 @@ export default function SignupPage() {
   const [state, formAction, pending] = useActionState<
     AuthActionState | null,
     FormData
-  >(async (_previous, formData) => signup(formData), null);
+  >(signup, null);
   return (
     <main className="auth-shell">
       <form
