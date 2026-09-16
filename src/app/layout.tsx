@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+
+import { MotionProvider } from "@/components/motion/motion-provider";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }
