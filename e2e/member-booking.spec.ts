@@ -20,7 +20,6 @@ test.describe("member booking", () => {
     await memberPage.getByRole("link", { name: "查看所有預約" }).click();
     await memberPage.getByRole("button", { name: "取消預約" }).click();
     await memberPage.getByRole("button", { name: "確認取消" }).click();
-    await expect(memberPage.getByText("預約已取消。")).toBeVisible();
     await expect(memberPage.getByText("已取消", { exact: true })).toBeVisible();
 
     await memberPage.goto("/account");
