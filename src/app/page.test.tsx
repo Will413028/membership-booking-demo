@@ -10,4 +10,11 @@ test("renders the Motion Room booking call to action", () => {
     "href",
     "/classes",
   );
+  for (const link of screen.getAllByRole("link", { name: /探索會員方案/i })) {
+    expect(link).toHaveAttribute("href", "/plans");
+  }
+  expect(screen.getByTestId("spotlight-effect")).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
 });
