@@ -29,6 +29,7 @@
 - Create: `src/components/motion/motion-provider.tsx`.
 - Create: `src/components/motion/reveal.tsx`.
 - Create: `src/components/motion/reveal.test.tsx`.
+- Modify: `src/test/setup.ts` with the minimal jsdom `IntersectionObserver` surface required by Motion's in-view observer.
 - Modify: `src/app/layout.tsx` to mount the provider once around the existing application body.
 
 **Interfaces:**
@@ -74,7 +75,7 @@
 
 - [ ] **Step 4: Run the focused test and verify green.**
 
-  Run `pnpm vitest run src/components/motion/reveal.test.tsx` and expect 1 test passed.
+  If jsdom reports `IntersectionObserver is not defined`, add only the no-op `observe`, `unobserve`, `disconnect`, and `takeRecords` methods to `src/test/setup.ts`; then run `pnpm vitest run src/components/motion/reveal.test.tsx` and expect 1 test passed.
 
 - [ ] **Step 5: Mount the provider and run the layout regression tests.**
 
@@ -82,7 +83,7 @@
 
 - [ ] **Step 6: Commit the focused task.**
 
-  Run `git diff --check && git commit --only -m "feat: add accessible motion foundation" -- package.json pnpm-lock.yaml src/components/motion/motion-provider.tsx src/components/motion/reveal.tsx src/components/motion/reveal.test.tsx src/app/layout.tsx`.
+  Run `git diff --check && git commit --only -m "feat: add accessible motion foundation" -- package.json pnpm-lock.yaml src/components/motion/motion-provider.tsx src/components/motion/reveal.tsx src/components/motion/reveal.test.tsx src/test/setup.ts src/app/layout.tsx`.
 
 ### Task 2: Add restrained Magic UI and Aceternity visual primitives
 
