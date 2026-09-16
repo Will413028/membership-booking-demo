@@ -26,11 +26,25 @@
   --color-olive: hsl(97 21% 33%);
   --color-sage: hsl(91 24% 79%);
   --color-coral: hsl(10 65% 60%);
+  --shadow-soft: 0 18px 40px -32px hsl(var(--ink) / 0.38);
+  --shadow-lift: 0 28px 60px -36px hsl(var(--ink) / 0.42);
+  --animate-spotlight: spotlight 2s ease 0.75s 1 forwards;
   --font-display: Georgia, "Times New Roman", serif;
   --font-sans: Arial, Helvetica, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+
+  @keyframes spotlight {
+    0% {
+      opacity: 0;
+      transform: translate(-72%, -62%) scale(0.5);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -40%) scale(1);
+    }
+  }
 }
 
 * {
@@ -43,6 +57,51 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: hsl(var(--accent));
+  color: hsl(var(--ink));
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--coral));
+  outline-offset: 4px;
+}
+
+.surface-paper {
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      hsl(var(--accent) / 0.22),
+      transparent 36%
+    ),
+    hsl(var(--background));
+}
+
+.surface-soft {
+  background:
+    linear-gradient(135deg, hsl(var(--background)), hsl(var(--sage) / 0.3));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 a {
