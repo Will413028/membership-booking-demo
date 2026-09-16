@@ -26,3 +26,25 @@ test("shows the remaining seats and a route to the class session", () => {
     screen.getByRole("link", { name: /查看 Reformer Foundations 課程/i }),
   ).toHaveAttribute("href", "/classes/session-1");
 });
+
+test("keeps the sold-out state visible", () => {
+  render(
+    <ClassCard
+      session={{
+        id: "session-full",
+        classId: "class-1",
+        className: "Evening Stretch",
+        category: "Yoga",
+        level: "All levels",
+        instructorName: "Mina Chen",
+        startsAt: "2026-09-23T10:00:00.000Z",
+        endsAt: "2026-09-23T10:50:00.000Z",
+        capacity: 8,
+        confirmedCount: 8,
+        remainingSpots: 0,
+      }}
+    />,
+  );
+
+  expect(screen.getByText("本堂已額滿")).toBeInTheDocument();
+});

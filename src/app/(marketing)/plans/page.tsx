@@ -37,18 +37,25 @@ export default async function PlansPage() {
     return <PlansUnavailable />;
   }
   return (
-    <section className="page-shell py-12 md:py-20">
-      <SectionHeading
-        eyebrow="Membership"
-        title="把練習留在生活裡"
-        description="從每月八堂、無限練習到單堂體驗，選擇目前最適合你的節奏。"
+    <section className="relative overflow-hidden bg-sage/25">
+      <div
+        aria-hidden="true"
+        className="absolute -left-32 top-20 size-72 rounded-full bg-accent/35 blur-3xl"
       />
-      <div className="mt-10">
-        {plans.length ? (
-          <PlanGrid plans={plans} isAuthenticated={Boolean(user)} />
-        ) : (
-          <PlansUnavailable />
-        )}
+      <div className="page-shell relative py-16 md:py-24">
+        <SectionHeading
+          className="max-w-3xl"
+          eyebrow="Membership"
+          title="把練習留在生活裡"
+          description="從每月八堂、無限練習到單堂體驗，選擇目前最適合你的節奏。"
+        />
+        <div className="mt-10">
+          {plans.length ? (
+            <PlanGrid plans={plans} isAuthenticated={Boolean(user)} />
+          ) : (
+            <PlansUnavailable />
+          )}
+        </div>
       </div>
     </section>
   );
@@ -56,7 +63,7 @@ export default async function PlansPage() {
 
 function PlansUnavailable() {
   return (
-    <p className="rounded-3xl bg-sage p-8 text-muted-foreground">
+    <p className="rounded-[1.75rem] border border-dashed border-olive/25 bg-paper/75 p-8 text-muted-foreground shadow-sm">
       方案資訊暫時無法載入，請稍後再試。
     </p>
   );

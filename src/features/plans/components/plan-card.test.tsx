@@ -39,3 +39,20 @@ test("shows the monthly starter price in TWD", () => {
     "/login?next=/plans",
   );
 });
+
+test("marks Unlimited as the recommended plan", () => {
+  render(
+    <PlanCard
+      plan={{
+        id: "unlimited-1",
+        code: "unlimited-monthly",
+        billingType: "subscription",
+        classCredits: null,
+        amountTwdCents: 488000,
+      }}
+      isAuthenticated={false}
+    />,
+  );
+
+  expect(screen.getByText("推薦方案")).toBeInTheDocument();
+});

@@ -20,13 +20,18 @@ export function ClassFilters() {
   return (
     <section
       aria-label="課程篩選"
-      className="grid gap-4 rounded-3xl bg-sage p-5 md:grid-cols-3"
+      className="grid gap-5 rounded-[1.75rem] border border-olive/15 bg-paper/70 p-5 shadow-[0_18px_40px_-32px_hsl(var(--ink))] backdrop-blur-sm md:grid-cols-3 md:p-6"
     >
       <div>
-        <Label htmlFor="date">開始日期</Label>
+        <Label
+          className="text-xs font-bold uppercase tracking-[0.16em] text-olive"
+          htmlFor="date"
+        >
+          開始日期
+        </Label>
         <input
           id="date"
-          className="mt-2 min-h-11 w-full rounded-xl border border-border bg-paper px-3"
+          className="mt-2 min-h-11 w-full rounded-xl border border-border bg-paper/80 px-3 text-ink shadow-sm outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/20"
           type="date"
           value={searchParams.get("startsAfter")?.slice(0, 10) ?? ""}
           onChange={(event) =>
@@ -40,10 +45,15 @@ export function ClassFilters() {
         />
       </div>
       <div>
-        <Label htmlFor="category">課程類型</Label>
+        <Label
+          className="text-xs font-bold uppercase tracking-[0.16em] text-olive"
+          htmlFor="category"
+        >
+          課程類型
+        </Label>
         <select
           id="category"
-          className="mt-2 min-h-11 w-full rounded-xl border border-border bg-paper px-3"
+          className="mt-2 min-h-11 w-full rounded-xl border border-border bg-paper/80 px-3 text-ink shadow-sm outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/20"
           value={searchParams.get("category") ?? ""}
           onChange={(event) => update("category", event.target.value)}
         >
@@ -55,10 +65,15 @@ export function ClassFilters() {
         </select>
       </div>
       <div>
-        <Label htmlFor="level">難度</Label>
+        <Label
+          className="text-xs font-bold uppercase tracking-[0.16em] text-olive"
+          htmlFor="level"
+        >
+          難度
+        </Label>
         <select
           id="level"
-          className="mt-2 min-h-11 w-full rounded-xl border border-border bg-paper px-3"
+          className="mt-2 min-h-11 w-full rounded-xl border border-border bg-paper/80 px-3 text-ink shadow-sm outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/20"
           value={searchParams.get("level") ?? ""}
           onChange={(event) => update("level", event.target.value)}
         >
