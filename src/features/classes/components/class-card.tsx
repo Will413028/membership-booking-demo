@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -24,14 +24,19 @@ export function ClassCard({ session }: { session: ClassSession }) {
       <div className="relative flex items-start justify-between gap-3">
         <div>
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-coral" />
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-coral"
+            />
             {formatStart(session.startsAt)}
           </p>
           <h3 className="mt-3 font-display text-2xl font-bold tracking-tight text-ink">
             {session.className}
           </h3>
         </div>
-        <Badge className="border border-olive/10 bg-sage/65">{session.category}</Badge>
+        <Badge className="border border-olive/10 bg-sage/65">
+          {session.category}
+        </Badge>
       </div>
       <div className="relative space-y-2 text-sm text-muted-foreground">
         <p>

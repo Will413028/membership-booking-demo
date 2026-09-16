@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, Sparkles } from "lucide-react";
-
-import { BlurFade } from "@/components/visual/blur-fade";
-import { Spotlight } from "@/components/visual/spotlight";
-import { Reveal } from "@/components/motion/reveal";
+import Link from "next/link";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { Reveal } from "@/components/motion/reveal";
 import { SectionHeading } from "@/components/shared/section-heading";
+import { BlurFade } from "@/components/visual/blur-fade";
+import { Spotlight } from "@/components/visual/spotlight";
 
 const openings = [
   {
@@ -108,11 +107,17 @@ export default function HomePage() {
                   <p className="mt-1 text-muted-foreground">種練習方式</p>
                 </div>
                 <div>
-                  <p className="font-display text-2xl font-bold text-ink">小班制</p>
-                  <p className="mt-1 text-muted-foreground">細緻引導每一次移動</p>
+                  <p className="font-display text-2xl font-bold text-ink">
+                    小班制
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    細緻引導每一次移動
+                  </p>
                 </div>
                 <div>
-                  <p className="font-display text-2xl font-bold text-ink">Taipei</p>
+                  <p className="font-display text-2xl font-bold text-ink">
+                    Taipei
+                  </p>
                   <p className="mt-1 text-muted-foreground">為生活留白</p>
                 </div>
               </div>

@@ -85,8 +85,11 @@ html {
 }
 
 .surface-soft {
-  background:
-    linear-gradient(135deg, hsl(var(--background)), hsl(var(--sage) / 0.3));
+  background: linear-gradient(
+    135deg,
+    hsl(var(--background)),
+    hsl(var(--sage) / 0.3)
+  );
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -94,13 +97,11 @@ html {
     scroll-behavior: auto;
   }
 
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+  [class*="animate-"],
+  [class*="transition"] {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
   }
 }
 
