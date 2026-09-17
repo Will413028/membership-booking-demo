@@ -1,0 +1,45 @@
+name: Deploy Supabase migrations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - supabase/migrations/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main'
+    name: Apply production migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          if [[ -z "$SUPABASE_DB_URL" ]]; then
+            echo "::error::Missing production secret: SUPABASE_DB_URL"
+            exit 1
+          fi
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+
+      - name: Push migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL"

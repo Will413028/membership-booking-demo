@@ -72,6 +72,16 @@ Local 與 hosted environment 都需要下列名稱；所有 server-only 值都�
 
 Hosted demo 使用已部署的 Supabase project URL/anon key、server-only service role、Stripe test-mode secret 與該部署的 public site URL。不要在 CI、client bundle 或 log 中放入任一 secret。CI 用空白的 secret-safe environment 只跑 lint、unit tests 與 build；它不啟動 Stripe forwarding，也不模擬或偽造付款成功。
 
+## Deployment automation
+
+Vercel 已連接 GitHub repository：Pull Request 會建立 Preview deployment，`main` 的 push 會建立 Production deployment。GitHub Actions 的 [CI workflow](.github/workflows/ci.yml) 會執行 lint、unit tests 與 production build；不需要另外在 workflow 裡執行 `vercel deploy`，以免同一個 commit 重複部署。
+
+`supabase-migrations.yml` 只在 `main` 的 Supabase migration 變更或從 `main` 手動觸發時執行，並以 `production` environment 的 secret 連線 hosted project。workflow 固定使用 `supabase/setup-cli@v3` 與 Supabase CLI `2.117.0`，透過 `supabase db push --db-url` 直接套用 migration，不需要把 Supabase Personal Access Token 放進 GitHub。升級 CLI 時應明確修改版本並重新驗證。第一次啟用前，在 GitHub repository 的 `Settings → Environments → production` 建立下列項目：
+
+- Secret `SUPABASE_DB_URL`：hosted Supabase Session pooler connection string，包含 database password；只放在 GitHub secret，不要寫入 repository。
+
+完成一次性設定後，日常流程是 Pull Request → CI／Vercel Preview → merge `main` → Vercel Production 與 Supabase migration 自動執行。migration job 使用同一個 concurrency group 且不取消正在執行的 migration，避免兩個 production migration 同時套用；GitHub 只保留一個 pending run，較新的 pending run 可能取代舊的 pending run，但最新 commit 會包含先前已提交、尚未套用的 migration。若 `production` environment 設定 required reviewers，migration 會等待人工核准；要維持零手動部署就不要加 reviewer gate。不要把上述 secret 寫入 repository、workflow 或 log。
+
 ## Admin role and E2E fixtures
 
 一般 seed 只建立方案、課程與未來場次。建立 local demo admin 後，使用 Supabase Dashboard 或 SQL editor 將該帳號對應的 `profiles.role` 設為 `admin`；其他帳號維持 `member`。只在 local/disposable project 做這個操作。
