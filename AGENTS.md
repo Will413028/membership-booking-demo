@@ -4,6 +4,7 @@ Next.js + Supabase + Stripe test-mode 會員預約展示。改行為前讀 `READ
 
 程式在 `src/`（`app/` 路由、`features/` 業務模組、`lib/` 共用）；資料庫在 `supabase/`（`migrations/`、`tests/`、`seed.sql`）。
 
+- 決策紀錄（ADR）：`docs/adr/`。
 - 僅限 Stripe test mode，不能處理真實卡號或 production customer data；server-only credentials 不進 client、log 或 Git。
 - 會員資格由驗證後的付款 webhook 授予，success page 不授權；保留 event ordering、重送冪等與 invoice 原週期判斷。
 - 不信任 signup metadata 的 admin role；DB 權限與 RPC 授權不可由 UI guard 取代。預約維持容量與會員資格鎖定，取消只退原扣堂週期。
