@@ -11,7 +11,7 @@ Signup trigger 固定建立 member profile；預約記錄扣堂 period，只於�
 
 ## Context
 
-這是一個用於爭取網站架設接案的獨立展示專案，模擬台北質感皮拉提斯／瑜伽工作室的會員預約系統。案件需求包含會員、預約、後台管理、下訂單結帳與美感網站；本專案以能展示完整端到端流程為成功標準，而不以生產環境的所有營運功能為目標。
+這是一個獨立的個人展示專案，模擬台北質感皮拉提斯／瑜伽工作室的會員預約系統。情境需求包含會員、預約、後台管理、下訂單結帳與美感網站；本專案以能展示完整端到端流程為成功標準，而不以生產環境的所有營運功能為目標。
 
 專案品牌暫定為 **MOTION / ROOM**，視覺方向為 Quiet modern：霧灰綠、白、深墨色，資訊層級清楚，讓訪客能快速找到預約入口；登入後則優先呈現個人課表與剩餘額度。
 
@@ -21,7 +21,7 @@ Signup trigger 固定建立 member profile；預約記錄扣堂 period，只於�
 - 讓訪客能註冊、選擇會員方案、以 Stripe test mode 完成付款，並在 webhook 成功後取得會員資格。
 - 讓有效會員能依場次容量與剩餘堂數完成預約、取消預約，並在會員中心查看狀態。
 - 讓管理員能管理課程場次、查看會員、預約與訂單。
-- 以 shadcn/ui 建立一致且具接案展示品質的 responsive UI。
+- 以 shadcn/ui 建立一致且具展示品質的 responsive UI。
 - 用 migration、seed、測試與 README 讓第三方能重現本機流程。
 
 ## Non-goals
@@ -194,4 +194,4 @@ README 會說明 `pnpm`、Supabase local migration／seed、Stripe CLI forwardin
 2. **Stripe test mode 而非真實台灣金流**：能完整展示 hosted checkout、subscription 與 webhook；代價是不能代表台灣正式收款，綠界／藍新應在正式報價階段以 adapter 替換。
 3. **混合會員方案而非只有一種訂閱**：同時呈現 recurring billing、one-time payment 與額度扣抵；代價是 webhook 與會員週期狀態比單一月費複雜，因此把優惠券、退款與通知明確排除。
 4. **Server-side mutation + transaction 而非 client optimistic booking**：能保護名額、額度與訂單不變量；代價是前端狀態更新稍慢，但可用 loading／processing state 清楚呈現。
-5. **前台公開首頁＋登入後 dashboard 而非單一 dashboard**：同時滿足接案展示的轉換頁與產品操作頁；代價是需要維護兩種 navigation context，但頁面責任清楚。
+5. **前台公開首頁＋登入後 dashboard 而非單一 dashboard**：同時滿足公開展示的介紹頁與產品操作頁；代價是需要維護兩種 navigation context，但頁面責任清楚。
