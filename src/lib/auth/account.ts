@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import { AuthError } from "@/lib/errors/auth";
 import type { ServerSupabaseClient } from "@/lib/supabase/server";
 import { requireUser } from "./guards";
-import { AuthError } from "./types";
 
 export async function requireAccountUser(
   path: "/account" | "/account/bookings" | "/account/orders",

@@ -7,8 +7,8 @@ const { requireUser, redirect } = vi.hoisted(() => ({
 vi.mock("./guards", () => ({ requireUser }));
 vi.mock("next/navigation", () => ({ redirect }));
 
+import { AuthError } from "@/lib/errors/auth";
 import { requireAccountUser } from "./account";
-import { AuthError } from "./types";
 
 beforeEach(() => {
   vi.clearAllMocks();

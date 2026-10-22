@@ -1,10 +1,10 @@
+import { AuthError } from "@/lib/errors/auth";
 import { DataError } from "@/lib/errors/data";
 import {
   createServerClient,
   type ServerSupabaseClient,
 } from "../supabase/server";
 import type { AppRole, SessionUser } from "./types";
-import { AuthError } from "./types";
 
 function isAppRole(role: unknown): role is AppRole {
   return role === "member" || role === "admin";

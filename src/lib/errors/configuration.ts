@@ -1,4 +1,4 @@
-import { AuthError } from "@/lib/auth/types";
+import { AuthError } from "./auth";
 
 export function isConfigurationError(error: unknown): boolean {
   if (error instanceof AuthError) {

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 
-import { AuthError } from "@/lib/auth/types";
+import { AuthError } from "@/lib/errors/auth";
 import { isConfigurationError } from "@/lib/errors/configuration";
 
 import { ConfigurationError } from "./configuration-error";

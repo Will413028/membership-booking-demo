@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
 
-import { AuthError } from "../auth/types";
+import { AuthError } from "@/lib/errors/auth";
 
 export type AdminSupabaseClient = SupabaseClient;
 

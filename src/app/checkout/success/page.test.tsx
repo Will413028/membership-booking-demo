@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, vi } from "vitest";
 
-import { AuthError } from "@/lib/auth/types";
+import { AuthError } from "@/lib/errors/auth";
 
 const { getOrderStatus } = vi.hoisted(() => ({ getOrderStatus: vi.fn() }));
 
