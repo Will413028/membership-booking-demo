@@ -2,7 +2,7 @@ import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-import { AuthError } from "../auth/types";
+import { AuthError } from "@/lib/errors/auth";
 
 export type ServerSupabaseClient = SupabaseClient;
 

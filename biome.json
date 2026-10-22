@@ -19,5 +19,108 @@
   },
   "files": {
     "includes": ["src/**"]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/features/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app/**"],
+                    "message": "app/ 是路由層，只有它往下引用 features/、components/、lib/。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/lib/**", "src/components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app/**", "@/features/**"],
+                    "message": "lib/ 與 components/ 是共用層，不引用 features/ 或 app/。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/lib/errors/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/lib/auth/**",
+                      "../auth/**",
+                      "../auth",
+                      "@/lib/supabase/**",
+                      "../supabase/**",
+                      "../supabase",
+                      "@/lib/stripe/**",
+                      "../stripe/**",
+                      "../stripe",
+                      "@/app/**",
+                      "@/features/**"
+                    ],
+                    "message": "lib/errors 是最底層，不引用其他 lib 模組，也不引用 features/、app/。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/lib/supabase/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/lib/auth/**",
+                      "../auth/**",
+                      "../auth",
+                      "@/lib/stripe/**",
+                      "../stripe/**",
+                      "../stripe",
+                      "@/app/**",
+                      "@/features/**"
+                    ],
+                    "message": "lib/supabase 只往下引用 lib/errors；auth、stripe、features/、app/ 都在它之上。"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

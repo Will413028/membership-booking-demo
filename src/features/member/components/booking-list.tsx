@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cancelAccountBooking } from "@/app/(member)/account/bookings/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -10,6 +9,7 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { cancelBooking } from "@/features/bookings/actions";
 
 import type { MemberBooking } from "./member-summary-card";
 
@@ -35,7 +35,7 @@ export function BookingList({ bookings }: { bookings: MemberBooking[] }) {
     );
   const cancel = (bookingId: string) =>
     startTransition(async () => {
-      const result = await cancelAccountBooking({ bookingId });
+      const result = await cancelBooking({ bookingId });
       setNotice(result.ok ? "預約已取消。" : result.message);
     });
   return (
